@@ -105,7 +105,7 @@ FocusGuard is the **world's first AI-powered focus assistant** that adapts to yo
 ## 🚀 Getting Started
 
 ### Instant Start
-1. **[Open FocusGuard](https://focusguard.replit.app)** in your browser
+1. **[Open FocusGuard](https://focusguard0001.netlify.app)** in your browser
 2. Click "▶ Start" for your first 25-minute focus session
 3. Complete the session and write a brief reflection
 4. Watch as the AI begins learning your patterns
