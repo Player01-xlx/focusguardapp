@@ -4,9 +4,8 @@
 ![FocusGuard Logo](https://img.shields.io/badge/🛡️-FocusGuard-black?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![AI Powered](https://img.shields.io/badge/🤖-AI%20Powered-brightgreen?style=flat)
-![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-**[🚀 Try the Live Demo](https://focusguard.replit.app)**
+**[🚀 Try the Live Demo]([https://focusguard.replit.app](https://focusguard0001.netlify.app/))**
 
 ## 🧠 Why FocusGuard Exists
 
