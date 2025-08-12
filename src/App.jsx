@@ -1,75 +1,18 @@
 /*
-FocusGuard - React Starter
+FocusGuard - React Starter (Enhanced AI Version)
 
-How to use:
-1) On Replit: create a new Replit using the "React" template.
-2) Open `src/App.js` and replace its content with everything in this file.
-3) (Optional) Replace `src/index.css` with your own styles or keep the defaults.
-4) Run the Replit preview (the "Run" button). The app will appear.
-
-What this app does (simple, beginner-friendly):
+What this app does:
 - A mobile-friendly Pomodoro-style focus timer (start / pause / reset).
-- A small task list you can add items to and check off.
-- Session history (saved in localStorage) with ability to download history as JSON.
-- Settings to change focus / break durations.
-- Uses the Browser Notifications API to notify you when a session ends (you must allow notifications).
+- Enhanced AI-powered recommendations and insights.
+- Advanced smart reminders with machine learning.
+- A task list and daily goals with intelligent prioritization.
+- Session history with deep analytics.
+- Clean monochrome design optimized for focus.
 
-This file is a single-file React app (default export) so it's easy to paste into Replit's src/App.js.
-Comments explain each section so you can learn and modify.
+This file is a single-file React app optimized for productivity and focus.
 */
 
 import React, { useState, useEffect, useRef } from "react";
-
-// Authentication API functions
-const API_BASE = process.env.NODE_ENV === 'production' ? '' : 
-  window.location.hostname === 'localhost' ? 'http://localhost:5000' : 
-  `https://5000-${window.location.hostname}`;
-
-const authAPI = {
-  register: async (email, password, username) => {
-    const response = await fetch(`${API_BASE}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, username })
-    });
-    return response.json();
-  },
-
-  login: async (email, password) => {
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    return response.json();
-  },
-
-  syncProgress: async (token, data) => {
-    const response = await fetch(`${API_BASE}/api/progress/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    return response.json();
-  },
-
-  loadProgress: async (token) => {
-    const response = await fetch(`${API_BASE}/api/progress/load`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    return response.json();
-  },
-
-  getLeaderboard: async () => {
-    const response = await fetch(`${API_BASE}/api/leaderboard`);
-    return response.json();
-  }
-};
 
 // ---------------------- Constants & Utilities ----------------------
 const DEFAULT_SETTINGS = {
@@ -81,28 +24,27 @@ const DEFAULT_SETTINGS = {
 
 const DEFAULT_CUSTOMIZATION = {
   layout: 'default', // 'default', 'compact', 'minimal'
-  theme: 'blue', // 'blue', 'green', 'purple', 'orange'
+  theme: 'monochrome',
   visibleSections: {
     tasks: true,
     dailyGoals: true,
     settings: true,
     history: true,
-    insights: true,
-    recommendations: true,
+    aiInsights: true,
+    smartRecommendations: true,
     achievements: true,
     streaks: true,
     sessionHighlights: true,
-    smartReminders: true
+    smartReminders: true,
+    focusAnalytics: true
   },
-  sectionOrder: ['recommendations', 'tasks', 'dailyGoals', 'insights', 'achievements', 'streaks', 'sessionHighlights', 'smartReminders', 'settings', 'history'],
+  sectionOrder: ['aiInsights', 'smartRecommendations', 'tasks', 'dailyGoals', 'focusAnalytics', 'achievements', 'streaks', 'sessionHighlights', 'smartReminders', 'settings', 'history'],
   headerButtons: {
     customize: true,
     analytics: true,
     layoutToggle: true,
-    darkMode: true,
     notifications: true,
-    leaderboard: true,
-    auth: true
+    aiCoach: true
   },
   showHeaderButtons: true
 };
@@ -115,24 +57,8 @@ const ACHIEVEMENTS = [
   { id: 'streak_7', name: 'Weekly Warrior', description: 'Maintain a 7-day streak', icon: '⚡', unlocked: false },
   { id: 'hundred_minutes', name: 'Century Club', description: 'Focus for 100 minutes total', icon: '💯', unlocked: false },
   { id: 'task_master', name: 'Task Master', description: 'Complete 50 tasks', icon: '✅', unlocked: false },
-  { id: 'goal_crusher', name: 'Goal Crusher', description: 'Complete all daily goals 5 times', icon: '🏆', unlocked: false },
+  { id: 'ai_student', name: 'AI Student', description: 'Follow 10 AI recommendations', icon: '🤖', unlocked: false },
 ];
-
-const UNLOCKABLE_THEMES = {
-  blue: { name: 'Ocean Blue', unlockLevel: 1, primary: '#3b82f6', secondary: '#1e40af' },
-  green: { name: 'Forest Green', unlockLevel: 3, primary: '#22c55e', secondary: '#15803d' },
-  purple: { name: 'Royal Purple', unlockLevel: 5, primary: '#8b5cf6', secondary: '#7c3aed' },
-  orange: { name: 'Sunset Orange', unlockLevel: 8, primary: '#f97316', secondary: '#ea580c' },
-  pink: { name: 'Sakura Pink', unlockLevel: 10, primary: '#ec4899', secondary: '#db2777' },
-  teal: { name: 'Ocean Teal', unlockLevel: 15, primary: '#14b8a6', secondary: '#0f766e' }
-};
-
-const UNLOCKABLE_SOUNDS = {
-  chime: { name: 'Gentle Chime', unlockLevel: 2 },
-  bell: { name: 'Temple Bell', unlockLevel: 4 },
-  nature: { name: 'Nature Sounds', unlockLevel: 6 },
-  piano: { name: 'Piano Melody', unlockLevel: 9 }
-};
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -169,16 +95,6 @@ export default function App() {
     }
   });
 
-  // Dark mode state
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem("fg_darkMode");
-      return saved ? JSON.parse(saved) : false;
-    } catch (e) {
-      return false;
-    }
-  });
-
   // Mobile layout detection
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [forceMobileLayout, setForceMobileLayout] = useState(() => {
@@ -205,7 +121,6 @@ export default function App() {
     try {
       const saved = localStorage.getItem("fg_customization");
       const parsed = saved ? JSON.parse(saved) : DEFAULT_CUSTOMIZATION;
-      // Ensure headerButtons exists
       if (!parsed.headerButtons) {
         parsed.headerButtons = DEFAULT_CUSTOMIZATION.headerButtons;
       }
@@ -228,6 +143,7 @@ export default function App() {
         streakCount: 0,
         lastStreakDate: null,
         streakFreezes: 0,
+        aiRecommendationsFollowed: 0,
         achievements: ACHIEVEMENTS
       };
     } catch (e) {
@@ -240,6 +156,7 @@ export default function App() {
         streakCount: 0,
         lastStreakDate: null,
         streakFreezes: 0,
+        aiRecommendationsFollowed: 0,
         achievements: ACHIEVEMENTS
       };
     }
@@ -282,26 +199,10 @@ export default function App() {
   });
   const [goalInput, setGoalInput] = useState("");
 
-  // Authentication state
-  const [user, setUser] = useState(() => {
-    try {
-      const savedAuth = localStorage.getItem("fg_auth");
-      return savedAuth ? JSON.parse(savedAuth) : null;
-    } catch (e) {
-      return null;
-    }
-  });
-  const [authToken, setAuthToken] = useState(() => localStorage.getItem("fg_token"));
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
-  const [authForm, setAuthForm] = useState({ email: '', password: '', username: '' });
-  const [authError, setAuthError] = useState('');
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-
   // UI state
   const [showCustomization, setShowCustomization] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false); // New state for Analytics Dashboard
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showAICoach, setShowAICoach] = useState(false);
   const [showReflection, setShowReflection] = useState(false);
   const [showBreakOptions, setShowBreakOptions] = useState(false);
   const [reflectionText, setReflectionText] = useState('');
@@ -311,7 +212,7 @@ export default function App() {
   const [sessionHighlights, setSessionHighlights] = useState(() => {
     try {
       const saved = localStorage.getItem("fg_sessionHighlights");
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.JSON.parse(saved) : [];
     } catch (e) {
       return [];
     }
@@ -326,6 +227,48 @@ export default function App() {
   const timerRef = useRef(null);
   const sessionStartRef = useRef(null);
 
+  // Enhanced Smart Reminders & AI state
+  const [smartReminders, setSmartReminders] = useState(() => {
+    try {
+      const saved = localStorage.getItem("fg_smartReminders");
+      return saved ? JSON.parse(saved) : {
+        enabled: false,
+        optimalTimes: [],
+        scheduledReminders: [],
+        aiLearningData: {
+          sessionPatterns: [],
+          productivityScores: [],
+          environmentFactors: []
+        },
+        preferences: {
+          reminderTypes: ['focus', 'break', 'streak', 'optimization'],
+          aiIntensity: 'adaptive', // 'low', 'medium', 'high', 'adaptive'
+          quietHours: { start: 22, end: 7 }
+        }
+      };
+    } catch {
+      return {
+        enabled: false,
+        optimalTimes: [],
+        scheduledReminders: [],
+        aiLearningData: {
+          sessionPatterns: [],
+          productivityScores: [],
+          environmentFactors: []
+        },
+        preferences: {
+          reminderTypes: ['focus', 'break', 'streak', 'optimization'],
+          aiIntensity: 'adaptive',
+          quietHours: { start: 22, end: 7 }
+        }
+      };
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("fg_smartReminders", JSON.stringify(smartReminders));
+  }, [smartReminders]);
+
   // Persist all state whenever they change
   useEffect(() => {
     localStorage.setItem("fg_settings", JSON.stringify(settings));
@@ -337,9 +280,6 @@ export default function App() {
     localStorage.setItem("fg_history", JSON.stringify(history));
   }, [history]);
   useEffect(() => {
-    localStorage.setItem("fg_darkMode", JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
-  useEffect(() => {
     localStorage.setItem("fg_dailyGoals", JSON.stringify(dailyGoals));
   }, [dailyGoals]);
   useEffect(() => {
@@ -347,21 +287,7 @@ export default function App() {
   }, [customization]);
   useEffect(() => {
     localStorage.setItem("fg_userProgress", JSON.stringify(userProgress));
-
-    // Auto-sync to cloud if user is logged in
-    if (user && authToken) {
-      syncToCloud();
-    }
   }, [userProgress]);
-
-  useEffect(() => {
-    if (user && authToken) {
-      localStorage.setItem("fg_auth", JSON.stringify(user));
-      localStorage.setItem("fg_token", authToken);
-      loadFromCloud();
-      loadLeaderboard();
-    }
-  }, [user, authToken]);
 
   // Update the remaining time if the user changes the settings
   useEffect(() => {
@@ -416,8 +342,13 @@ export default function App() {
       startTime: startTime,
       endTime: endTime,
       durationSec: durationSec,
+      productivityScore: calculateProductivityScore(durationSec, mode),
+      environmentContext: captureEnvironmentContext()
     };
     setHistory((h) => [sessionRecord, ...h]);
+
+    // Update AI learning data
+    updateAILearningData(sessionRecord);
 
     // Show reward animation
     setShowRewardAnimation(true);
@@ -470,6 +401,10 @@ export default function App() {
               return newStreak >= 7 ? { ...achievement, unlocked: true } : achievement;
             case 'hundred_minutes':
               return newTotalMinutes >= 100 ? { ...achievement, unlocked: true } : achievement;
+            case 'task_master':
+              return prev.totalTasks >= 50 ? { ...achievement, unlocked: true } : achievement;
+            case 'ai_student':
+              return prev.aiRecommendationsFollowed >= 10 ? { ...achievement, unlocked: true } : achievement;
             default:
               return achievement;
           }
@@ -494,7 +429,26 @@ export default function App() {
 
     // Decide next mode
     if (mode === "focus") {
-      // If we've reached cyclesBeforeLongBreak, go to long break
+      // AI-driven session length adjustment
+      let nextFocusMinutes = settings.focusMinutes;
+      const completedFocusSessions = history.filter(s => s.mode === 'focus');
+      const successRate = completedFocusSessions.length > 0 
+        ? completedFocusSessions.filter(s => s.productivityScore && s.productivityScore >= 70).length / completedFocusSessions.length 
+        : 1;
+
+      if (successRate < 0.6 && settings.focusMinutes > 15) {
+        nextFocusMinutes = Math.max(15, settings.focusMinutes - 5);
+        sendNotification('AI Focus Adjustment', `Your focus sessions are challenging. AI suggests shortening to ${nextFocusMinutes} minutes.`);
+      } else if (successRate > 0.85 && settings.focusMinutes < 45) {
+        nextFocusMinutes = Math.min(45, settings.focusMinutes + 5);
+        sendNotification('AI Focus Adjustment', `You're excelling! AI suggests extending focus to ${nextFocusMinutes} minutes.`);
+      }
+
+      if (nextFocusMinutes !== settings.focusMinutes) {
+        setSettings(prev => ({ ...prev, focusMinutes: nextFocusMinutes }));
+      }
+
+      // Determine next mode
       if (cyclesRef.current >= settings.cyclesBeforeLongBreak) {
         cyclesRef.current = 0; // reset
         setMode("long");
@@ -506,9 +460,226 @@ export default function App() {
       setMode("focus");
     }
 
-    // Prepare next duration (will be set by the mode effect)
-    // Ask for permission and send a browser notification if allowed
+    // Send notification
     sendNotification(`Session finished`, `Mode: ${mode} — next: ${mode === "focus" ? (cyclesRef.current === 0 ? "long break" : "short break") : "focus"}`);
+  }
+
+  // Advanced AI Functions
+  function calculateProductivityScore(durationSec, sessionMode) {
+    if (sessionMode !== 'focus') return 0;
+
+    const expectedDuration = settings.focusMinutes * 60;
+    const completionRate = Math.min(durationSec / expectedDuration, 1);
+    const hour = new Date().getHours();
+
+    // Base score from completion
+    let score = completionRate * 100;
+
+    // Bonus for peak hours (based on historical data)
+    const optimalTimes = smartReminders.optimalTimes;
+    const isOptimalTime = optimalTimes.some(time => Math.abs(time.hour - hour) <= 1);
+    if (isOptimalTime) score *= 1.2;
+
+    // Penalty for very late or very early sessions
+    if (hour < 6 || hour > 23) score *= 0.8;
+
+    return Math.round(score);
+  }
+
+  function captureEnvironmentContext() {
+    const hour = new Date().getHours();
+    const dayOfWeek = new Date().getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    return {
+      hour,
+      dayOfWeek,
+      isWeekend,
+      hasActiveTasks: tasks.filter(t => !t.done).length > 0,
+      pendingGoals: dailyGoals.filter(g => !g.completed && g.createdAt === new Date().toISOString().slice(0, 10)).length,
+      recentSessionCount: history.filter(s => Date.now() - s.startTime < 3600000).length // Last hour
+    };
+  }
+
+  function updateAILearningData(sessionRecord) {
+    setSmartReminders(prev => {
+      if (!prev || !prev.aiLearningData) return prev;
+
+      return {
+        ...prev,
+        aiLearningData: {
+          ...prev.aiLearningData,
+          sessionPatterns: [...(prev.aiLearningData.sessionPatterns || []), {
+            timestamp: sessionRecord.startTime,
+            duration: sessionRecord.durationSec,
+            mode: sessionRecord.mode,
+            hour: new Date(sessionRecord.startTime).getHours(),
+            dayOfWeek: new Date(sessionRecord.startTime).getDay(),
+            success: sessionRecord.durationSec >= (settings.focusMinutes * 60 * 0.8)
+          }].slice(-100), // Keep last 100 sessions
+          productivityScores: [...(prev.aiLearningData.productivityScores || []), sessionRecord.productivityScore || 0].slice(-50),
+          environmentFactors: [...(prev.aiLearningData.environmentFactors || []), sessionRecord.environmentContext].slice(-50)
+        }
+      };
+    });
+  }
+
+  // AI Analysis Functions
+  function performDeepAIAnalysis() {
+    if (!smartReminders || !smartReminders.aiLearningData) {
+      return {
+        insights: ['Complete more sessions to unlock AI insights'],
+        recommendations: [],
+        predictions: [],
+        confidence: 0
+      };
+    }
+
+    const sessions = smartReminders.aiLearningData.sessionPatterns || [];
+    const scores = smartReminders.aiLearningData.productivityScores || [];
+    const environment = smartReminders.aiLearningData.environmentFactors || [];
+
+    if (sessions.length < 5) {
+      return {
+        insights: ['Complete more sessions to unlock AI insights'],
+        recommendations: [],
+        predictions: [],
+        confidence: 0
+      };
+    }
+
+    // Pattern recognition
+    const hourlyPerformance = {};
+    const weekdayPerformance = {};
+
+    sessions.forEach((session, index) => {
+      const score = scores[index] || 0;
+
+      // Hourly analysis
+      if (!hourlyPerformance[session.hour]) {
+        hourlyPerformance[session.hour] = { scores: [], count: 0 };
+      }
+      hourlyPerformance[session.hour].scores.push(score);
+      hourlyPerformance[session.hour].count++;
+
+      // Weekday analysis
+      if (!weekdayPerformance[session.dayOfWeek]) {
+        weekdayPerformance[session.dayOfWeek] = { scores: [], count: 0 };
+      }
+      weekdayPerformance[session.dayOfWeek].scores.push(score);
+      weekdayPerformance[session.dayOfWeek].count++;
+    });
+
+    // Calculate averages
+    Object.keys(hourlyPerformance).forEach(hour => {
+      const data = hourlyPerformance[hour];
+      data.avgScore = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+    });
+
+    Object.keys(weekdayPerformance).forEach(day => {
+      const data = weekdayPerformance[day];
+      data.avgScore = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+    });
+
+    // Generate insights
+    const insights = [];
+    const recommendations = [];
+    const predictions = [];
+
+    // Peak performance time
+    const bestHour = Object.keys(hourlyPerformance).reduce((a, b) => 
+      hourlyPerformance[a].avgScore > hourlyPerformance[b].avgScore ? a : b
+    );
+
+    if (hourlyPerformance[bestHour] && hourlyPerformance[bestHour].count >= 3) {
+      insights.push(`Your peak performance is at ${bestHour}:00 with ${Math.round(hourlyPerformance[bestHour].avgScore)}% average productivity`);
+      recommendations.push({
+        type: 'timing',
+        title: 'Optimize Your Schedule',
+        description: `Schedule important tasks around ${bestHour}:00 for maximum productivity`,
+        action: () => alert(`💡 Pro tip: Block ${bestHour}:00-${parseInt(bestHour)+2}:00 for your most challenging work!`)
+      });
+    }
+
+    // Productivity decline detection
+    const recentScores = scores.slice(-10);
+    const earlierScores = scores.slice(-20, -10);
+
+    if (recentScores.length >= 5 && earlierScores.length >= 5) {
+      const recentAvg = recentScores.reduce((a, b) => a + b, 0) / recentScores.length;
+      const earlierAvg = earlierScores.reduce((a, b) => a + b, 0) / earlierScores.length;
+
+      if (recentAvg < earlierAvg - 15) {
+        insights.push(`Productivity declined by ${Math.round(earlierAvg - recentAvg)}% in recent sessions`);
+        recommendations.push({
+          type: 'recovery',
+          title: 'Productivity Recovery Plan',
+          description: 'Consider shorter sessions, better breaks, or addressing external factors',
+          action: () => {
+            setSettings(prev => ({ ...prev, focusMinutes: Math.max(15, prev.focusMinutes - 5) }));
+            alert('🔧 AI adjusted your session length for better success rate!');
+          }
+        });
+      }
+    }
+
+    // Session length optimization
+    const completionRate = sessions.filter(s => s.success).length / sessions.length;
+    if (completionRate < 0.6) {
+      recommendations.push({
+        type: 'optimization',
+        title: 'Session Length Adjustment',
+        description: `${Math.round(completionRate * 100)}% completion rate suggests shorter sessions`,
+        action: () => {
+          const newLength = Math.max(15, settings.focusMinutes - 5);
+          setSettings(prev => ({ ...prev, focusMinutes: newLength }));
+          alert(`🎯 AI recommendation applied: Sessions reduced to ${newLength} minutes`);
+        }
+      });
+    } else if (completionRate > 0.9) {
+      recommendations.push({
+        type: 'challenge',
+        title: 'Ready for Longer Sessions',
+        description: `Excellent ${Math.round(completionRate * 100)}% completion rate! Try longer sessions`,
+        action: () => {
+          const newLength = Math.min(50, settings.focusMinutes + 5);
+          setSettings(prev => ({ ...prev, focusMinutes: newLength }));
+          alert(`🚀 AI recommendation applied: Sessions increased to ${newLength} minutes`);
+        }
+      });
+    }
+
+    // Predict next session success
+    const currentHour = new Date().getHours();
+    const currentDay = new Date().getDay();
+
+    let predictedScore = 75; // Base prediction
+
+    if (hourlyPerformance[currentHour]) {
+      predictedScore = hourlyPerformance[currentHour].avgScore;
+    }
+
+    if (weekdayPerformance[currentDay]) {
+      predictedScore = (predictedScore + weekdayPerformance[currentDay].avgScore) / 2;
+    }
+
+    predictions.push({
+      type: 'session_success',
+      score: Math.round(predictedScore),
+      confidence: Math.min(sessions.length / 20, 1) * 100,
+      factors: [
+        `Time of day factor: ${hourlyPerformance[currentHour] ? 'favorable' : 'unknown'}`,
+        `Day of week factor: ${weekdayPerformance[currentDay] ? 'analyzed' : 'new'}`,
+        `Recent trend: ${recentScores.length ? (recentScores.slice(-3).reduce((a,b) => a+b, 0) / 3 > 70 ? 'positive' : 'needs attention') : 'insufficient data'}`
+      ]
+    });
+
+    return {
+      insights,
+      recommendations,
+      predictions,
+      confidence: Math.min(sessions.length / 25, 1) * 100
+    };
   }
 
   // Post-session reflection handler
@@ -544,224 +715,6 @@ export default function App() {
     sessionStartRef.current = null;
   }
 
-  // Smart Reminders & Automation state
-  const [smartReminders, setSmartReminders] = useState(() => {
-    try {
-      const saved = localStorage.getItem("fg_smartReminders");
-      return saved ? JSON.parse(saved) : {
-        enabled: false,
-        optimalTimes: [],
-        scheduledReminders: [],
-        preferences: {
-          reminderTypes: ['focus', 'break', 'streak'],
-          frequency: 'adaptive', // 'low', 'medium', 'high', 'adaptive'
-          quietHours: { start: 22, end: 7 }
-        }
-      };
-    } catch {
-      return {
-        enabled: false,
-        optimalTimes: [],
-        scheduledReminders: [],
-        preferences: {
-          reminderTypes: ['focus', 'break', 'streak'],
-          frequency: 'adaptive',
-          quietHours: { start: 22, end: 7 }
-        }
-      };
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem("fg_smartReminders", JSON.stringify(smartReminders));
-  }, [smartReminders]);
-
-  // AI-powered optimal time analysis
-  function analyzeOptimalNotificationTimes() {
-    const focusSessions = history.filter(s => s.mode === 'focus');
-    if (focusSessions.length < 5) return [];
-
-    // Analyze session start times and success rates
-    const hourlyPerformance = {};
-    focusSessions.forEach(session => {
-      const hour = new Date(session.startTime).getHours();
-      const success = session.durationSec >= (settings.focusMinutes * 60 * 0.8);
-
-      if (!hourlyPerformance[hour]) {
-        hourlyPerformance[hour] = { total: 0, successful: 0, sessions: [] };
-      }
-      hourlyPerformance[hour].total++;
-      if (success) hourlyPerformance[hour].successful++;
-      hourlyPerformance[hour].sessions.push({
-        date: new Date(session.startTime).toISOString().slice(0, 10),
-        dayOfWeek: new Date(session.startTime).getDay(),
-        success
-      });
-    });
-
-    // Calculate optimal times based on success rate and frequency
-    const optimalTimes = Object.keys(hourlyPerformance)
-      .map(hour => ({
-        hour: parseInt(hour),
-        successRate: hourlyPerformance[hour].successful / hourlyPerformance[hour].total,
-        frequency: hourlyPerformance[hour].total,
-        confidence: Math.min(hourlyPerformance[hour].total / 10, 1) // Confidence based on data points
-      }))
-      .filter(time => time.successRate >= 0.6 && time.frequency >= 2)
-      .sort((a, b) => (b.successRate * b.confidence) - (a.successRate * a.confidence))
-      .slice(0, 5);
-
-    return optimalTimes;
-  }
-
-  // Generate AI-powered reminder suggestions
-  function generateSmartReminderSuggestions() {
-    const suggestions = [];
-    const currentHour = new Date().getHours();
-    const currentDay = new Date().getDay();
-    const today = new Date().toISOString().slice(0, 10);
-
-    // Check if it's quiet hours
-    const isQuietHours = (currentHour >= smartReminders.preferences.quietHours.start || 
-                         currentHour <= smartReminders.preferences.quietHours.end);
-
-    const todaysSessions = history.filter(s => 
-      new Date(s.startTime).toISOString().slice(0, 10) === today && s.mode === 'focus'
-    );
-
-    // Streak protection reminder
-    if (smartReminders.preferences.reminderTypes.includes('streak') && 
-        userProgress.streakCount >= 3 && todaysSessions.length === 0 && !isQuietHours) {
-      suggestions.push({
-        type: 'streak_protection',
-        priority: 'high',
-        title: '🔥 Streak Alert!',
-        message: `Your ${userProgress.streakCount}-day streak needs attention! Quick focus session?`,
-        suggestedTime: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
-        action: () => {
-          setMode('focus');
-          setSettings(prev => ({ ...prev, focusMinutes: 15 }));
-          resetTimer();
-        }
-      });
-    }
-
-    // Optimal time reminders
-    const optimalTimes = analyzeOptimalNotificationTimes();
-    const nextOptimalHour = optimalTimes.find(time => 
-      time.hour > currentHour && time.hour < smartReminders.preferences.quietHours.start
-    );
-
-    if (nextOptimalHour && smartReminders.preferences.reminderTypes.includes('focus')) {
-      const timeUntil = (nextOptimalHour.hour - currentHour) * 60 * 60 * 1000;
-      suggestions.push({
-        type: 'optimal_time',
-        priority: 'medium',
-        title: '🎯 Peak Performance Time',
-        message: `${nextOptimalHour.hour}:00 is your peak focus time (${Math.round(nextOptimalHour.successRate * 100)}% success rate)`,
-        suggestedTime: new Date(Date.now() + timeUntil - 15 * 60 * 1000), // 15 min before optimal time
-        action: () => {
-          alert(`⏰ Peak time approaching! Your historical success rate at ${nextOptimalHour.hour}:00 is ${Math.round(nextOptimalHour.successRate * 100)}%`);
-        }
-      });
-    }
-
-    // Break reminders for long focus sessions
-    if (smartReminders.preferences.reminderTypes.includes('break') && running && remaining < 300) { // Less than 5 minutes left
-      suggestions.push({
-        type: 'break_preparation',
-        priority: 'low',
-        title: '🧘‍♀️ Break Time Soon',
-        message: 'Focus session ending soon. Plan your break activity!',
-        suggestedTime: new Date(Date.now() + remaining * 1000),
-        action: () => {
-          setShowBreakOptions(true);
-        }
-      });
-    }
-
-    return suggestions;
-  }
-
-  // Schedule smart reminders
-  function scheduleSmartReminder(suggestion) {
-    const timeUntilReminder = suggestion.suggestedTime.getTime() - Date.now();
-
-    if (timeUntilReminder > 0) {
-      const reminderId = setTimeout(() => {
-        if (Notification.permission === "granted") {
-          const notification = new Notification(suggestion.title, {
-            body: suggestion.message,
-            icon: '/favicon.svg',
-            badge: '/favicon.svg'
-          });
-
-          notification.onclick = () => {
-            window.focus();
-            if (suggestion.action) suggestion.action();
-            notification.close();
-          };
-        } else {
-          // Fallback to browser alert
-          const shouldAct = confirm(`${suggestion.title}\n\n${suggestion.message}\n\nTake action now?`);
-          if (shouldAct && suggestion.action) suggestion.action();
-        }
-
-        // Remove from scheduled reminders
-        setSmartReminders(prev => ({
-          ...prev,
-          scheduledReminders: prev.scheduledReminders.filter(r => r.id !== suggestion.id)
-        }));
-      }, timeUntilReminder);
-
-      const scheduledReminder = {
-        ...suggestion,
-        id: Vr(),
-        scheduledAt: Date.now(),
-        timeoutId: reminderId
-      };
-
-      setSmartReminders(prev => ({
-        ...prev,
-        scheduledReminders: [...prev.scheduledReminders, scheduledReminder]
-      }));
-
-      return scheduledReminder;
-    }
-    return null;
-  }
-
-  // Smart notification system with AI suggestions
-  function requestNotificationPermission() {
-    if (!("Notification" in window)) {
-      alert("This browser does not support notifications.");
-      return;
-    }
-
-    Notification.requestPermission().then((permission) => {
-      if (permission === "granted") {
-        // Enable smart reminders and analyze optimal times
-        const optimalTimes = analyzeOptimalNotificationTimes();
-
-        setSmartReminders(prev => ({
-          ...prev,
-          enabled: true,
-          optimalTimes
-        }));
-
-        // Generate and schedule initial smart reminders
-        const suggestions = generateSmartReminderSuggestions();
-        suggestions.forEach(suggestion => {
-          scheduleSmartReminder(suggestion);
-        });
-
-        alert(`🤖 Smart Reminders Activated!\n\n✅ Notification permission granted\n📊 Analyzed ${history.filter(s => s.mode === 'focus').length} focus sessions\n🎯 Found ${optimalTimes.length} optimal time slots\n⏰ Scheduled ${suggestions.length} smart reminders\n\nAI will now suggest the best times to focus based on your habits!`);
-      } else {
-        alert("Notification permission denied. Smart reminders will use browser alerts instead.");
-      }
-    });
-  }
-
   // Enhanced notification with smart scheduling
   function sendNotification(title, body, options = {}) {
     if (!("Notification" in window)) return;
@@ -774,17 +727,6 @@ export default function App() {
           badge: '/favicon.svg',
           ...options
         });
-
-        // Auto-schedule next smart reminder after each session
-        if (smartReminders.enabled && title.includes('finished')) {
-          setTimeout(() => {
-            const suggestions = generateSmartReminderSuggestions();
-            suggestions.slice(0, 2).forEach(suggestion => { // Limit to 2 suggestions
-              scheduleSmartReminder(suggestion);
-            });
-          }, 5000); // Wait 5 seconds after session end
-        }
-
         return notification;
       } catch (e) {
         console.warn("Notification failed", e);
@@ -792,131 +734,82 @@ export default function App() {
     }
   }
 
-  // Clear scheduled reminders
-  function clearScheduledReminders() {
-    smartReminders.scheduledReminders.forEach(reminder => {
-      if (reminder.timeoutId) {
-        clearTimeout(reminder.timeoutId);
-      }
-    });
-
-    setSmartReminders(prev => ({
-      ...prev,
-      scheduledReminders: []
-    }));
-  }
-
-  // Authentication functions
-  async function handleAuth(e) {
-    e.preventDefault();
-    setAuthError('');
-
-    try {
-      let result;
-      if (authMode === 'register') {
-        result = await authAPI.register(authForm.email, authForm.password, authForm.username);
-      } else {
-        result = await authAPI.login(authForm.email, authForm.password);
-      }
-
-      if (result.error) {
-        setAuthError(result.error);
-        return;
-      }
-
-      setUser(result.user);
-      setAuthToken(result.token);
-      setShowAuth(false);
-      setAuthForm({ email: '', password: '', username: '' });
-
-      // Load user's cloud data
-      await loadFromCloud();
-    } catch (error) {
-      setAuthError('Connection error. Please try again.');
-      console.error('Auth error:', error);
+  // Smart notification system
+  function requestNotificationPermission() {
+    if (!("Notification" in window)) {
+      alert("This browser does not support notifications.");
+      return;
     }
-  }
 
-  function logout() {
-    setUser(null);
-    setAuthToken(null);
-    localStorage.removeItem("fg_auth");
-    localStorage.removeItem("fg_token");
-    setLeaderboard([]);
-  }
+    // Check current permission status
+    if (Notification.permission === "granted") {
+      setSmartReminders(prev => ({ ...prev, enabled: true }));
+      alert(`🤖 Smart Notifications Already Active!\n\n✅ Notification permission granted\n📊 AI system ready to learn your patterns\n🎯 Intelligent reminders will be scheduled automatically\n\nThe AI will adapt to your productivity patterns!`);
+      return;
+    }
 
-  // Cloud sync functions
-  async function syncToCloud() {
-    if (!user || !authToken) return;
+    if (Notification.permission === "denied") {
+      alert("🔒 Notification Permission Blocked\n\nTo enable notifications:\n1. Click the lock icon in your browser's address bar\n2. Change notifications to 'Allow'\n3. Refresh the page and try again\n\nSmart reminders will use browser alerts for now.");
+      setSmartReminders(prev => ({ ...prev, enabled: true }));
+      return;
+    }
 
+    // Request permission (only works on direct user interaction)
     try {
-      await authAPI.syncProgress(authToken, {
-        userProgress,
-        tasks,
-        dailyGoals,
-        history,
-        sessionHighlights
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          setSmartReminders(prev => ({ ...prev, enabled: true }));
+          alert(`🤖 Smart Notifications Activated!\n\n✅ Notification permission granted\n📊 AI system ready to learn your patterns\n🎯 Intelligent reminders will be scheduled automatically\n\nThe AI will adapt to your productivity patterns!`);
+        } else if (permission === "denied") {
+          alert("🔒 Notification Permission Denied\n\nTo enable later:\n1. Click the lock icon in your browser's address bar\n2. Change notifications to 'Allow'\n3. Refresh the page\n\nSmart reminders will use browser alerts for now.");
+          setSmartReminders(prev => ({ ...prev, enabled: true }));
+        } else {
+          alert("Notification permission dismissed. Smart reminders will use browser alerts instead.");
+          setSmartReminders(prev => ({ ...prev, enabled: true }));
+        }
+      }).catch((error) => {
+        console.warn("Notification permission error:", error);
+        alert("🔒 Notification Setup Issue\n\nYour browser may be blocking notification requests. Smart reminders will use browser alerts instead.");
+        setSmartReminders(prev => ({ ...prev, enabled: true }));
       });
     } catch (error) {
-      console.error('Sync error:', error);
+      console.warn("Notification API error:", error);
+      alert("🔒 Notification Not Supported\n\nYour browser doesn't support notification requests. Smart reminders will use browser alerts instead.");
+      setSmartReminders(prev => ({ ...prev, enabled: true }));
     }
   }
-
-  async function loadFromCloud() {
-    if (!user || !authToken) return;
-
-    try {
-      const data = await authAPI.loadProgress(authToken);
-      if (data.error) return;
-
-      if (data.userProgress) setUserProgress(data.userProgress);
-      if (data.tasks) setTasks(data.tasks);
-      if (data.dailyGoals) setDailyGoals(data.dailyGoals);
-      if (data.history) setHistory(data.history);
-      if (data.sessionHighlights) setSessionHighlights(data.sessionHighlights);
-    } catch (error) {
-      console.error('Load error:', error);
-    }
-  }
-
-  async function loadLeaderboard() {
-    try {
-      const data = await authAPI.getLeaderboard();
-      if (Array.isArray(data)) {
-        setLeaderboard(data);
-      }
-    } catch (error) {
-      console.error('Leaderboard error:', error);
-    }
-  }
-
-  // Refresh leaderboard every 30 seconds
-  useEffect(() => {
-    if (user) {
-      loadLeaderboard();
-      const interval = setInterval(loadLeaderboard, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
 
   // Tasks handlers
   function addTask() {
     const text = taskInput.trim();
     if (!text) return;
-    const t = { id: generateId(), text, done: false };
+    const t = { 
+      id: generateId(), 
+      text, 
+      done: false,
+      priority: 'medium',
+      aiSuggested: false,
+      createdAt: Date.now()
+    };
     setTasks((s) => [t, ...s]);
     setTaskInput("");
   }
+
   function toggleTask(id) {
     setTasks((s) => s.map((t) => {
       if (t.id === id && !t.done) {
         // Task completed - award XP
         setUserProgress(prev => {
-          const newXP = prev.xp + 5; // 5 XP per task
+          const newXP = prev.xp + (t.aiSuggested ? 8 : 5); // Bonus for AI-suggested tasks
           const newLevel = calculateLevel(newXP);
           const newTotalTasks = prev.totalTasks + 1;
+          const newAIRecs = t.aiSuggested ? prev.aiRecommendationsFollowed + 1 : prev.aiRecommendationsFollowed;
+
           const updatedAchievements = prev.achievements.map(achievement => {
             if (achievement.id === 'task_master' && newTotalTasks >= 50) {
+              return { ...achievement, unlocked: true };
+            }
+            if (achievement.id === 'ai_student' && newAIRecs >= 10) {
               return { ...achievement, unlocked: true };
             }
             return achievement;
@@ -932,6 +825,7 @@ export default function App() {
             xp: newXP,
             level: newLevel,
             totalTasks: newTotalTasks,
+            aiRecommendationsFollowed: newAIRecs,
             achievements: updatedAchievements
           };
         });
@@ -939,6 +833,7 @@ export default function App() {
       return t.id === id ? { ...t, done: !t.done } : t;
     }));
   }
+
   function removeTask(id) {
     setTasks((s) => s.filter((t) => t.id !== id));
   }
@@ -964,27 +859,21 @@ export default function App() {
       id: generateId(), 
       text, 
       completed: false, 
-      createdAt: new Date().toISOString().slice(0, 10) // YYYY-MM-DD format
+      createdAt: new Date().toISOString().slice(0, 10)
     };
     setDailyGoals((goals) => [goal, ...goals]);
     setGoalInput("");
   }
+
   function toggleDailyGoal(id) {
     setDailyGoals((goals) => goals.map((goal) => {
       if (goal.id === id && !goal.completed) {
         // Goal completed - award XP
         setUserProgress(prev => {
-          const newXP = prev.xp + 10; // 10 XP per goal
+          const newXP = prev.xp + 10;
           const newLevel = calculateLevel(newXP);
           const newGoalsCompleted = prev.totalGoalsCompleted + 1;
-          const updatedAchievements = prev.achievements.map(achievement => {
-            if (achievement.id === 'goal_crusher' && newGoalsCompleted >= 25) {
-              return { ...achievement, unlocked: true };
-            }
-            return achievement;
-          });
 
-          // Check for level up
           if (newLevel > prev.level) {
             sendNotification(`Level Up!`, `Congratulations! You've reached level ${newLevel}!`);
           }
@@ -993,17 +882,18 @@ export default function App() {
             ...prev,
             xp: newXP,
             level: newLevel,
-            totalGoalsCompleted: newGoalsCompleted,
-            achievements: updatedAchievements
+            totalGoalsCompleted: newGoalsCompleted
           };
         });
       }
       return goal.id === id ? { ...goal, completed: !goal.completed } : goal;
     }));
   }
+
   function removeDailyGoal(id) {
     setDailyGoals((goals) => goals.filter((goal) => goal.id !== id));
   }
+
   function clearOldGoals() {
     const today = new Date().toISOString().slice(0, 10);
     setDailyGoals((goals) => goals.filter((goal) => goal.createdAt === today));
@@ -1026,7 +916,7 @@ export default function App() {
           display: 'flex', 
           justifyContent: 'space-between', 
           fontSize: 12, 
-          color: isDarkMode ? "#999" : "#666",
+          color: "#666",
           marginBottom: 4 
         }}>
           <span>Progress: {completed}/{total}</span>
@@ -1035,14 +925,14 @@ export default function App() {
         <div style={{
           width: '100%',
           height: 8,
-          backgroundColor: isDarkMode ? '#30363d' : '#e0e0e0',
+          backgroundColor: '#e0e0e0',
           borderRadius: 4,
           overflow: 'hidden'
         }}>
           <div style={{
             width: `${progress}%`,
             height: '100%',
-            backgroundColor: getThemeColor(),
+            backgroundColor: '#000',
             transition: 'width 0.3s ease',
             borderRadius: 4
           }} />
@@ -1051,196 +941,116 @@ export default function App() {
     );
   }
 
-  // Get current theme color
-  function getThemeColor() {
-    const theme = UNLOCKABLE_THEMES[customization.theme];
-    return theme ? theme.primary : '#22c55e';
-  }
+  // AI-Powered Recommendations System (Enhanced)
+  function getEnhancedAIRecommendations() {
+    const analysis = performDeepAIAnalysis();
+    const recommendations = [...(analysis.recommendations || [])];
 
-  // AI-Powered Recommendations System
-  function getAIRecommendations() {
-    const recommendations = [];
     const recentSessions = history.slice(0, 20);
     const focusSessions = recentSessions.filter(s => s.mode === 'focus');
     const completedSessions = focusSessions.filter(s => s.durationSec >= settings.focusMinutes * 60 * 0.8);
     const completionRate = focusSessions.length > 0 ? completedSessions.length / focusSessions.length : 0;
 
-    // Analyze session patterns
-    const sessionTimes = focusSessions.map(s => new Date(s.startTime).getHours());
-    const hourCounts = sessionTimes.reduce((acc, hour) => {
-      acc[hour] = (acc[hour] || 0) + 1;
-      return acc;
-    }, {});
-    const peakHour = Object.keys(hourCounts).reduce((a, b) => hourCounts[a] > hourCounts[b] ? a : b, 0);
-
-    // Session length optimization
-    if (completionRate < 0.6 && settings.focusMinutes > 15) {
+    // Task prioritization AI
+    const overdueTasks = tasks.filter(t => !t.done).length;
+    if (overdueTasks > 0) {
+      const urgentTasks = tasks.filter(t => !t.done).slice(0, 3);
       recommendations.push({
-        type: 'optimization',
-        title: 'Reduce Session Length',
-        description: `Your completion rate is ${Math.round(completionRate * 100)}%. Try ${Math.max(15, settings.focusMinutes - 10)}-minute sessions for better success.`,
-        action: () => setSettings(prev => ({ ...prev, focusMinutes: Math.max(15, settings.focusMinutes - 10) })),
+        type: 'task_optimization',
+        title: '🎯 AI Task Prioritization',
+        description: `Focus on these ${urgentTasks.length} high-impact tasks during your next session`,
+        action: () => {
+          // Auto-prioritize tasks
+          setTasks(prev => prev.map(task => {
+            if (urgentTasks.includes(task)) {
+              return { ...task, priority: 'high', aiSuggested: true };
+            }
+            return task;
+          }));
+          alert('🤖 AI has prioritized your most important tasks!');
+        },
         priority: 'high',
-        icon: '⏱️'
+        icon: '🎯'
       });
     }
 
-    if (completionRate > 0.9 && settings.focusMinutes < 50) {
+    // Environment optimization
+    const currentHour = new Date().getHours();
+    if (currentHour >= 14 && currentHour <= 16) {
       recommendations.push({
-        type: 'optimization',
-        title: 'Increase Session Length',
-        description: `Excellent ${Math.round(completionRate * 100)}% completion rate! Try ${settings.focusMinutes + 10}-minute sessions for deeper focus.`,
-        action: () => setSettings(prev => ({ ...prev, focusMinutes: Math.min(50, settings.focusMinutes + 10) })),
+        type: 'environment',
+        title: '☕ Afternoon Energy Boost',
+        description: 'Post-lunch dip detected. Consider a 5-minute walk or hydration break before focusing',
+        action: () => {
+          setShowBreakOptions(true);
+        },
         priority: 'medium',
-        icon: '🚀'
+        icon: '☕'
       });
     }
 
-    // Peak time recommendations
-    if (focusSessions.length >= 5 && peakHour) {
-      const currentHour = new Date().getHours();
-      if (Math.abs(currentHour - peakHour) <= 1) {
+    // Smart session suggestions
+    if (analysis.predictions && analysis.predictions.length > 0) {
+      const prediction = analysis.predictions[0];
+      if (prediction && prediction.score >= 80) {
         recommendations.push({
           type: 'timing',
-          title: 'Perfect Timing!',
-          description: `${peakHour}:00 is your peak focus time. You're ${Math.round(hourCounts[peakHour] / focusSessions.length * 100)}% more productive now.`,
+          title: '⚡ Optimal Focus Window',
+          description: `AI predicts ${prediction.score}% success rate right now. Perfect time to start!`,
           action: () => {
             setMode('focus');
             resetTimer();
+            startTimer();
           },
           priority: 'high',
-          icon: '🎯'
+          icon: '⚡'
         });
-      } else if (Math.abs(currentHour - peakHour) <= 3) {
+      } else if (prediction.score < 60) {
         recommendations.push({
           type: 'timing',
-          title: 'Approaching Peak Time',
-          description: `Your peak focus time is ${peakHour}:00. Consider scheduling important tasks then.`,
-          action: null,
-          priority: 'low',
-          icon: '📅'
+          title: '🔄 Suboptimal Conditions',
+          description: `AI suggests waiting or taking a short break. Current success prediction: ${prediction.score}%`,
+          action: () => {
+            setMode('short');
+            resetTimer();
+          },
+          priority: 'medium',
+          icon: '🔄'
         });
       }
     }
 
-    // Task management suggestions
-    const overdueTasks = tasks.filter(t => !t.done).length;
-    const taskCompletionRate = tasks.length > 0 ? tasks.filter(t => t.done).length / tasks.length : 0;
+    // Adaptive learning suggestions
+    if (smartReminders && smartReminders.aiLearningData && smartReminders.aiLearningData.sessionPatterns && smartReminders.aiLearningData.sessionPatterns.length >= 10) {
+      const patterns = smartReminders.aiLearningData.sessionPatterns;
+      const recentFailures = patterns.slice(-5).filter(p => p && !p.success).length;
 
-    if (overdueTasks > 5) {
-      recommendations.push({
-        type: 'productivity',
-        title: 'Task Overload Detected',
-        description: `You have ${overdueTasks} pending tasks. Consider breaking large tasks into smaller ones.`,
-        action: () => alert('💡 Tip: Break large tasks into 25-minute chunks. Each small win builds momentum!'),
-        priority: 'medium',
-        icon: '📋'
-      });
-    }
-
-    if (taskCompletionRate < 0.3 && tasks.length > 3) {
-      recommendations.push({
-        type: 'productivity',
-        title: 'Focus on Task Completion',
-        description: `Low task completion rate (${Math.round(taskCompletionRate * 100)}%). Try focusing on 2-3 important tasks.`,
-        action: () => alert('💡 Tip: Use the 1-3-5 rule: 1 big thing, 3 medium things, 5 small things per day.'),
-        priority: 'medium',
-        icon: '✅'
-      });
-    }
-
-    // Streak protection and motivation
-    if (userProgress.streakCount >= 5) {
-      const today = new Date().toISOString().slice(0, 10);
-      const todaysSessions = history.filter(s => 
-        new Date(s.startTime).toISOString().slice(0, 10) === today && s.mode === 'focus'
-      );
-
-      if (todaysSessions.length === 0 && new Date().getHours() >= 18) {
+      if (recentFailures >= 3) {
         recommendations.push({
-          type: 'streak',
-          title: 'Streak Alert!',
-          description: `Protect your ${userProgress.streakCount}-day streak! Quick 15-minute session before bed?`,
+          type: 'adaptation',
+          title: '🧠 Learning Mode Activated',
+          description: 'AI detected completion challenges. Switching to adaptive short sessions',
           action: () => {
             setSettings(prev => ({ ...prev, focusMinutes: 15 }));
             setMode('focus');
             resetTimer();
+            alert('🤖 AI Coach: Starting with shorter 15-minute sessions to rebuild momentum!');
           },
           priority: 'high',
-          icon: '🔥'
+          icon: '🧠'
         });
       }
     }
 
-    // Theme and customization suggestions
-    const unlockedThemes = Object.entries(UNLOCKABLE_THEMES).filter(([_, theme]) => userProgress.level >= theme.unlockLevel);
-    if (unlockedThemes.length > 1 && customization.theme === 'blue') {
-      recommendations.push({
-        type: 'customization',
-        title: 'New Themes Available',
-        description: `You've unlocked ${unlockedThemes.length} themes! Try a new look to stay motivated.`,
-        action: () => setShowCustomization(true),
-        priority: 'low',
-        icon: '🎨'
-      });
-    }
-
-    // Weekly goal setting
-    const thisWeekSessions = history.filter(s => {
-      const sessionDate = new Date(s.startTime);
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      return sessionDate >= weekStart && s.mode === 'focus';
-    });
-
-    if (thisWeekSessions.length >= 10) {
-      recommendations.push({
-        type: 'achievement',
-        title: 'Weekly Goal Crusher!',
-        description: `${thisWeekSessions.length} focus sessions this week! You're building excellent habits.`,
-        action: null,
-        priority: 'low',
-        icon: '🏆'
-      });
-    } else if (thisWeekSessions.length < 3 && new Date().getDay() >= 3) {
-      recommendations.push({
-        type: 'motivation',
-        title: 'Weekly Boost Needed',
-        description: `Only ${thisWeekSessions.length} sessions this week. Small consistent efforts lead to big results!`,
-        action: () => {
-          setMode('focus');
-          resetTimer();
-        },
-        priority: 'medium',
-        icon: '💪'
-      });
-    }
-
-    // Break frequency optimization
-    const breakSessions = history.filter(s => s.mode !== 'focus');
-    const breakToFocusRatio = focusSessions.length > 0 ? breakSessions.length / focusSessions.length : 0;
-
-    if (breakToFocusRatio < 0.5) {
-      recommendations.push({
-        type: 'wellness',
-        title: 'Take More Breaks',
-        description: 'Regular breaks improve focus quality. Try following your focus sessions with short breaks.',
-        action: () => alert('💡 Remember: Breaks aren\'t lazy time—they\'re brain maintenance time!'),
-        priority: 'medium',
-        icon: '🧘‍♀️'
-      });
-    }
-
     // Sort by priority
     const priorityOrder = { high: 3, medium: 2, low: 1 };
-    return recommendations.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]).slice(0, 5);
+    return recommendations.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]).slice(0, 6);
   }
 
   // Customization handlers
   function updateCustomization(key, value) {
     setCustomization(prev => {
       const updated = { ...prev, [key]: value };
-      // Ensure headerButtons always exists
       if (!updated.headerButtons) {
         updated.headerButtons = DEFAULT_CUSTOMIZATION.headerButtons;
       }
@@ -1283,116 +1093,134 @@ export default function App() {
     setSettings((s) => ({ ...s, [key]: Number(value) }));
   }
 
-  // Adaptive Focus Scheduling & Smart Insights
-  function getAdaptiveSessionLength() {
-    const recentSessions = history.slice(0, 10).filter(s => s.mode === 'focus');
-    if (recentSessions.length < 3) return settings.focusMinutes;
-
-    const completedSessions = recentSessions.filter(s => s.durationSec >= settings.focusMinutes * 60 * 0.8);
-    const completionRate = completedSessions.length / recentSessions.length;
-
-    if (completionRate < 0.6) {
-      return Math.max(10, Math.floor(settings.focusMinutes * 0.8)); // Shorter sessions
-    } else if (completionRate > 0.9) {
-      return Math.min(60, Math.floor(settings.focusMinutes * 1.2)); // Longer sessions
-    }
-    return settings.focusMinutes;
-  }
-
-  function getSmartTimeSlots() {
-    const focusSessions = history.filter(s => s.mode === 'focus');
-    if (focusSessions.length < 5) return [];
-
-    const hourPerformance = {};
-    focusSessions.forEach(session => {
-      const hour = new Date(session.startTime).getHours();
-      const completionRate = session.durationSec >= (settings.focusMinutes * 60 * 0.8) ? 1 : 0;
-      if (!hourPerformance[hour]) hourPerformance[hour] = { total: 0, completed: 0 };
-      hourPerformance[hour].total++;
-      hourPerformance[hour].completed += completionRate;
-    });
-
-    return Object.keys(hourPerformance)
-      .map(hour => ({
-        hour: parseInt(hour),
-        rate: hourPerformance[hour].completed / hourPerformance[hour].total,
-        count: hourPerformance[hour].total
-      }))
-      .filter(slot => slot.count >= 2 && slot.rate >= 0.7)
-      .sort((a, b) => b.rate - a.rate)
-      .slice(0, 3);
-  }
-
-  function getSmartInsights() {
-    const recentSessions = history.slice(0, 20);
-    const focusSessions = recentSessions.filter(s => s.mode === 'focus');
-    const smartSlots = getSmartTimeSlots();
-    const adaptiveLength = getAdaptiveSessionLength();
-
-    let insights = [];
-
-    // Adaptive session length suggestion
-    if (adaptiveLength !== settings.focusMinutes) {
-      insights.push({
-        type: 'suggestion',
-        message: adaptiveLength < settings.focusMinutes 
-          ? `Based on your recent performance, try shorter ${adaptiveLength}-minute sessions.`
-          : `You're doing great! Try extending to ${adaptiveLength}-minute sessions.`,
-        action: 'Apply Suggestion'
-      });
-    }
-
-    // Smart time slot suggestions
-    const currentHour = new Date().getHours();
-    const bestSlot = smartSlots.find(slot => Math.abs(slot.hour - currentHour) <= 1);
-    if (bestSlot) {
-      insights.push({
-        type: 'suggestion',
-        message: `You have ${Math.round(bestSlot.rate * 100)}% success rate at ${bestSlot.hour}:00. Great time to focus!`,
-        action: 'Start Smart Session'
-      });
-    }
-
-    // Streak protection
-    if (userProgress.streakCount >= 3) {
-      const today = new Date().toISOString().slice(0, 10);
-      const todaysSessions = history.filter(s => 
-        new Date(s.startTime).toISOString().slice(0, 10) === today && s.mode === 'focus'
-      );
-
-      if (todaysSessions.length === 0) {
-        insights.push({
-          type: 'warning',
-          message: `Protect your ${userProgress.streakCount}-day streak! Complete a focus session today.`,
-          action: 'Start Session'
-        });
-      }
-    }
-
-    // Monthly goal forecast
-    const monthlyGoal = userProgress.level * 20;
-    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const currentDay = new Date().getDate();
-    const remainingDays = daysInMonth - currentDay;
-    const hoursNeeded = Math.max(0, monthlyGoal - (userProgress.totalFocusMinutes / 60));
-
-    if (hoursNeeded > 0 && remainingDays > 0) {
-      const hoursPerDay = Math.ceil(hoursNeeded / remainingDays * 10) / 10;
-      insights.push({
-        type: 'forecast',
-        message: `${hoursNeeded.toFixed(1)} hours left to reach your monthly goal. Aim for ${hoursPerDay} hours/day.`,
-        action: 'View Progress'
-      });
-    }
-
-    return insights;
-  }
-
   // Render sections based on customization
   function renderSection(sectionKey) {
     if (!customization.visibleSections[sectionKey]) return null;
 
     switch (sectionKey) {
+      case 'aiInsights':
+        const analysis = performDeepAIAnalysis();
+        return (
+          <div key="aiInsights" style={currentStyles.card}>
+            <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              🧠 AI Insights
+              <span style={{ 
+                fontSize: 10, 
+                backgroundColor: '#000', 
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: 8,
+                fontWeight: 'normal'
+              }}>
+                {Math.round(analysis.confidence)}% confidence
+              </span>
+            </h3>
+            {analysis.insights.length === 0 ? (
+              <div style={{ color: "#666", fontSize: 14 }}>Complete more sessions to unlock AI insights.</div>
+            ) : (
+              <div>
+                {analysis.insights.map((insight, index) => (
+                  <div key={index} style={{ 
+                    padding: 10, 
+                    borderRadius: 6, 
+                    marginBottom: 8,
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #e0e0e0',
+                    fontSize: 13
+                  }}>
+                    💡 {insight}
+                  </div>
+                ))}
+                {analysis.predictions.length > 0 && (
+                  <div style={{ 
+                    padding: 10, 
+                    borderRadius: 6,
+                    backgroundColor: '#f0f9ff',
+                    border: '1px solid #3b82f6',
+                    marginTop: 10
+                  }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
+                      🔮 Next Session Prediction: {analysis.predictions[0].score}%
+                    </div>
+                    <div style={{ fontSize: 11, color: '#666' }}>
+                      {analysis.predictions[0].factors.map((factor, i) => (
+                        <div key={i}>• {factor}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'smartRecommendations':
+        const recommendations = getEnhancedAIRecommendations();
+        return (
+          <div key="smartRecommendations" style={currentStyles.card}>
+            <h3 style={{ marginTop: 0 }}>🤖 AI Recommendations</h3>
+            {recommendations.length === 0 ? (
+              <div style={{ color: "#666" }}>AI is learning your patterns. Complete more sessions for personalized recommendations!</div>
+            ) : (
+              recommendations.map((rec, index) => (
+                <div key={index} style={{
+                  padding: 12,
+                  borderRadius: 8,
+                  marginBottom: 10,
+                  backgroundColor: rec.priority === 'high' ? '#fef2f2' :
+                                 rec.priority === 'medium' ? '#f0fdf4' : '#f0f9ff',
+                  border: `1px solid ${rec.priority === 'high' ? '#dc2626' :
+                                      rec.priority === 'medium' ? '#22c55e' : '#3b82f6'}`,
+                  position: 'relative'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: rec.priority === 'high' ? '#dc2626' :
+                           rec.priority === 'medium' ? '#22c55e' : '#3b82f6',
+                    textTransform: 'uppercase'
+                  }}>
+                    {rec.priority}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>{rec.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{rec.title}</div>
+                      <div style={{ fontSize: 12, color: "#555", lineHeight: 1.4 }}>
+                        {rec.description}
+                      </div>
+                    </div>
+                  </div>
+                  {rec.action && (
+                    <button
+                      style={{
+                        ...currentStyles.smallBtn,
+                        backgroundColor: '#000',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '6px 12px'
+                      }}
+                      onClick={() => {
+                        rec.action();
+                        setUserProgress(prev => ({ 
+                          ...prev, 
+                          aiRecommendationsFollowed: prev.aiRecommendationsFollowed + 1 
+                        }));
+                        alert('🤖 AI recommendation applied successfully!');
+                      }}
+                    >
+                      Apply AI Suggestion
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        );
+
       case 'tasks':
         return (
           <div key="tasks" style={currentStyles.card}>
@@ -1414,13 +1242,23 @@ export default function App() {
             </div>
             <div style={{ marginTop: 12, maxHeight: 240, overflow: "auto" }}>
               {tasks.length === 0 ? (
-                <div style={{ color: isDarkMode ? "#999" : "#666" }}>No tasks yet.</div>
+                <div style={{ color: "#666" }}>No tasks yet.</div>
               ) : (
                 tasks.map((t) => (
                   <div key={t.id} style={currentStyles.taskRow}>
                     <label style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
                       <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)} />
-                      <div style={{ flex: 1, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</div>
+                      <div style={{ 
+                        flex: 1, 
+                        textDecoration: t.done ? "line-through" : "none",
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}>
+                        {t.text}
+                        {t.aiSuggested && <span style={{ fontSize: 10, backgroundColor: '#000', color: '#fff', padding: '1px 4px', borderRadius: 4 }}>AI</span>}
+                        {t.priority === 'high' && <span style={{ color: '#dc2626', fontSize: 12 }}>🔥</span>}
+                      </div>
                       <button style={currentStyles.iconBtn} onClick={() => removeTask(t.id)}>✖</button>
                     </label>
                   </div>
@@ -1451,7 +1289,7 @@ export default function App() {
             </div>
             <div style={{ marginTop: 12, maxHeight: 200, overflow: "auto" }}>
               {todayGoals.length === 0 ? (
-                <div style={{ color: isDarkMode ? "#999" : "#666" }}>No daily goals yet.</div>
+                <div style={{ color: "#666" }}>No daily goals yet.</div>
               ) : (
                 todayGoals.map((goal) => (
                   <div key={goal.id} style={currentStyles.taskRow}>
@@ -1472,107 +1310,75 @@ export default function App() {
           </div>
         );
 
-      case 'insights':
-        const insights = getSmartInsights();
+      case 'focusAnalytics':
         return (
-          <div key="insights" style={currentStyles.card}>
-            <h3 style={{ marginTop: 0 }}>Smart Insights 🧠</h3>
-            {insights.length === 0 ? (
-              <div style={{ color: isDarkMode ? "#999" : "#666" }}>Complete more sessions to see insights.</div>
-            ) : (
-              insights.map((insight, index) => (
-                <div key={index} style={{ 
-                  padding: 8, 
-                  borderRadius: 6, 
-                  marginBottom: 8,
-                  backgroundColor: insight.type === 'warning' ? (isDarkMode ? '#5d1a1a' : '#fef2f2') : 
-                                 insight.type === 'suggestion' ? (isDarkMode ? '#1a5d2e' : '#f0fdf4') :
-                                 (isDarkMode ? '#1a2d5d' : '#f0f9ff'),
-                  border: `1px solid ${insight.type === 'warning' ? '#dc2626' : 
-                                      insight.type === 'suggestion' ? getThemeColor() : '#3b82f6'}`
-                }}>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>{insight.message}</div>
-                  {insight.action && (
-                    <button 
-                      style={{ ...currentStyles.smallBtn, fontSize: 11 }}
-                      onClick={() => {
-                        if (insight.action.includes('Start')) {
-                          setMode('focus');
-                          resetTimer();
-                        } else if (insight.action === 'Apply Suggestion') {
-                          const adaptiveLength = getAdaptiveSessionLength();
-                          setSettings(prev => ({ ...prev, focusMinutes: adaptiveLength }));
-                        }
-                      }}
-                    >
-                      {insight.action}
-                    </button>
-                  )}
+          <div key="focusAnalytics" style={currentStyles.card}>
+            <h3 style={{ marginTop: 0 }}>📊 Focus Analytics</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>
+                  {history.filter(s => s.mode === 'focus').length}
                 </div>
-              ))
-            )}
-          </div>
-        );
-
-      case 'recommendations':
-        const recommendations = getAIRecommendations();
-        return (
-          <div key="recommendations" style={currentStyles.card}>
-            <h3 style={{ marginTop: 0 }}>🤖 AI Recommendations</h3>
-            {recommendations.length === 0 ? (
-              <div style={{ color: isDarkMode ? "#999" : "#666" }}>Use the app more to get personalized AI recommendations!</div>
-            ) : (
-              recommendations.map((rec, index) => (
-                <div key={index} style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  marginBottom: 10,
-                  backgroundColor: rec.priority === 'high' ? (isDarkMode ? '#5d1a1a' : '#fef2f2') :
-                                 rec.priority === 'medium' ? (isDarkMode ? '#1a5d2e' : '#f0fdf4') :
-                                 (isDarkMode ? '#1a2d5d' : '#f0f9ff'),
-                  border: `1px solid ${rec.priority === 'high' ? '#f59e0b' :
-                                      rec.priority === 'medium' ? getThemeColor() : '#3b82f6'}`,
-                  position: 'relative'
+                <div style={{ fontSize: 12, color: "#666" }}>Total Sessions</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>
+                  {Math.round((history.filter(s => s.mode === 'focus' && s.durationSec >= settings.focusMinutes * 60 * 0.8).length / Math.max(history.filter(s => s.mode === 'focus').length, 1)) * 100)}%
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>Success Rate</div>
+              </div>
+            </div>
+            {smartReminders && smartReminders.aiLearningData && smartReminders.aiLearningData.productivityScores && smartReminders.aiLearningData.productivityScores.length > 0 && (
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Productivity Trend (Last 10 Sessions)</div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'end', 
+                  height: 60, 
+                  gap: 2 
                 }}>
-                  <div style={{
-                    position: 'absolute',
-                    top: 6,
-                    right: 6,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: rec.priority === 'high' ? '#f59e0b' :
-                           rec.priority === 'medium' ? getThemeColor() : '#3b82f6',
-                    textTransform: 'uppercase'
-                  }}>
-                    {rec.priority}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18 }}>{rec.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{rec.title}</div>
-                      <div style={{ fontSize: 12, color: isDarkMode ? "#ccc" : "#555", lineHeight: 1.4 }}>
-                        {rec.description}
+                  {(() => {
+                    const scores = (smartReminders && smartReminders.aiLearningData && smartReminders.aiLearningData.productivityScores) 
+                      ? smartReminders.aiLearningData.productivityScores.slice(-20) 
+                      : [];
+                    return scores.length > 0 ? scores.map((score, i) => (
+                      <div key={i} style={{
+                        flex: 1,
+                        backgroundColor: score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#dc2626',
+                        height: `${Math.max(score || 0, 5)}%`,
+                        minHeight: 4,
+                        borderRadius: 2,
+                        position: 'relative',
+                        cursor: 'pointer'
+                      }} title={`Session ${i + 1}: ${score || 0}% productivity`}>
+                        <div style={{
+                          position: 'absolute',
+                          bottom: -20,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          fontSize: 8,
+                          color: '#666',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {i % 5 === 0 ? i + 1 : ''}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  {rec.action && (
-                    <button
-                      style={{
-                        ...currentStyles.smallBtn,
-                        fontSize: 11,
-                        marginTop: 6,
-                        backgroundColor: rec.priority === 'high' ? '#f59e0b' :
-                                       rec.priority === 'medium' ? getThemeColor() : '#3b82f6',
-                        color: '#fff',
-                        border: 'none'
-                      }}
-                      onClick={rec.action}
-                    >
-                      Apply Recommendation
-                    </button>
-                  )}
+                    )) : (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        color: '#666',
+                        fontSize: 14
+                      }}>
+                        Complete more sessions to see productivity trends
+                      </div>
+                    );
+                  })()}
                 </div>
-              ))
+              </div>
             )}
           </div>
         );
@@ -1583,41 +1389,29 @@ export default function App() {
           <div key="achievements" style={currentStyles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h3 style={{ margin: 0 }}>Achievements 🏆</h3>
-              {user && (
-                <div style={{ 
-                  fontSize: 10, 
-                  color: getThemeColor(),
-                  backgroundColor: isDarkMode ? '#1a5d2e' : '#f0fdf4',
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  border: `1px solid ${getThemeColor()}`
-                }}>
-                  ☁️ SYNCED
-                </div>
-              )}
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>Level {calculateLevel(userProgress.xp)}</div>
-              <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666", marginBottom: 4 }}>
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
                 {userProgress.xp} / {getXPForNextLevel(userProgress.xp)} XP
               </div>
               <div style={{
                 width: '100%',
                 height: 6,
-                backgroundColor: isDarkMode ? '#30363d' : '#e0e0e0',
+                backgroundColor: '#e0e0e0',
                 borderRadius: 3
               }}>
                 <div style={{
                   width: `${(getXPProgressInCurrentLevel(userProgress.xp) / 100) * 100}%`,
                   height: '100%',
-                  backgroundColor: getThemeColor(),
+                  backgroundColor: '#000',
                   borderRadius: 3
                 }} />
               </div>
             </div>
             <div style={{ maxHeight: 150, overflow: 'auto' }}>
               {unlockedAchievements.length === 0 ? (
-                <div style={{ color: isDarkMode ? "#999" : "#666" }}>No achievements yet. Start focusing!</div>
+                <div style={{ color: "#666" }}>No achievements yet. Start focusing!</div>
               ) : (
                 unlockedAchievements.map(achievement => (
                   <div key={achievement.id} style={{
@@ -1626,13 +1420,13 @@ export default function App() {
                     gap: 8,
                     padding: 6,
                     borderRadius: 4,
-                    backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa',
+                    backgroundColor: '#f8f9fa',
                     marginBottom: 4
                   }}>
                     <span style={{ fontSize: 20 }}>{achievement.icon}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{achievement.name}</div>
-                      <div style={{ fontSize: 11, color: isDarkMode ? "#999" : "#666" }}>{achievement.description}</div>
+                      <div style={{ fontSize: 11, color: "#666" }}>{achievement.description}</div>
                     </div>
                   </div>
                 ))
@@ -1647,27 +1441,29 @@ export default function App() {
             <h3 style={{ marginTop: 0 }}>Streaks & Stats 📊</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: getThemeColor() }}>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>
                   {userProgress.streakCount}
                 </div>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>Day Streak</div>
+                <div style={{ fontSize: 12, color: "#666" }}>Day Streak</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: getThemeColor() }}>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>
                   {Math.round(userProgress.totalFocusMinutes)}
                 </div>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>Total Minutes</div>
+                <div style={{ fontSize: 12, color: "#666" }}>Total Minutes</div>
               </div>
             </div>
-            {userProgress.streakFreezes > 0 && (
+            {userProgress.aiRecommendationsFollowed > 0 && (
               <div style={{ 
-                marginTop: 8, 
-                padding: 6, 
-                borderRadius: 4, 
-                backgroundColor: isDarkMode ? '#2d1b69' : '#f3f4f6',
-                textAlign: 'center'
+                marginTop: 12, 
+                textAlign: 'center',
+                padding: 8,
+                backgroundColor: '#f0f9ff',
+                borderRadius: 6,
+                border: '1px solid #3b82f6'
               }}>
-                <div style={{ fontSize: 12 }}>🛡️ {userProgress.streakFreezes} Streak Freezes Available</div>
+                <div style={{ fontSize: 16, fontWeight: 600 }}>🤖 {userProgress.aiRecommendationsFollowed}</div>
+                <div style={{ fontSize: 11, color: "#666" }}>AI Recommendations Followed</div>
               </div>
             )}
           </div>
@@ -1700,13 +1496,14 @@ export default function App() {
             <h3 style={{ marginTop: 0 }}>Session History</h3>
             <div style={{ maxHeight: 220, overflow: "auto" }}>
               {history.length === 0 ? (
-                <div style={{ color: isDarkMode ? "#999" : "#666" }}>No sessions yet — start a focus session.</div>
+                <div style={{ color: "#666" }}>No sessions yet — start a focus session.</div>
               ) : (
                 history.map((s) => (
                   <div key={s.id} style={currentStyles.historyRow}>
                     <div>
                       <strong>{s.mode === "focus" ? "Focus" : s.mode === "short" ? "Short Break" : "Long Break"}</strong>
-                      <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>{new Date(s.startTime).toLocaleString()}</div>
+                      {s.productivityScore && <span style={{ fontSize: 10, marginLeft: 6, backgroundColor: '#000', color: '#fff', padding: '1px 4px', borderRadius: 4 }}>{s.productivityScore}%</span>}
+                      <div style={{ fontSize: 12, color: "#666" }}>{new Date(s.startTime).toLocaleString()}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>{formatTime(s.durationSec)}</div>
                   </div>
@@ -1726,18 +1523,18 @@ export default function App() {
             <h3 style={{ marginTop: 0 }}>Session Highlights 📝</h3>
             <div style={{ maxHeight: 180, overflow: "auto" }}>
               {sessionHighlights.length === 0 ? (
-                <div style={{ color: isDarkMode ? "#999" : "#666" }}>Complete focus sessions and reflect to build your productivity journal.</div>
+                <div style={{ color: "#666" }}>Complete focus sessions and reflect to build your productivity journal.</div>
               ) : (
                 sessionHighlights.map((highlight) => (
                   <div key={highlight.id} style={{
                     padding: 8,
                     borderRadius: 6,
                     marginBottom: 8,
-                    backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa',
-                    border: `1px solid ${isDarkMode ? '#30363d' : '#e0e0e0'}`
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #e0e0e0'
                   }}>
                     <div style={{ fontSize: 13, marginBottom: 4 }}>{highlight.text}</div>
-                    <div style={{ fontSize: 11, color: isDarkMode ? "#999" : "#666" }}>
+                    <div style={{ fontSize: 11, color: "#666" }}>
                       {highlight.sessionDuration}min session • {new Date(highlight.timestamp).toLocaleDateString()}
                     </div>
                   </div>
@@ -1757,42 +1554,22 @@ export default function App() {
                 <div style={{ 
                   padding: 8, 
                   borderRadius: 6, 
-                  backgroundColor: isDarkMode ? '#1a5d2e' : '#f0fdf4',
+                  backgroundColor: '#f0fdf4',
                   border: '1px solid #22c55e',
                   marginBottom: 12 
                 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>✅ Active</div>
-                  <div style={{ fontSize: 12, color: isDarkMode ? "#ccc" : "#666" }}>
-                    {smartReminders.optimalTimes.length} optimal times identified
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>✅ AI System Active</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    Learning from {smartReminders && smartReminders.aiLearningData && smartReminders.aiLearningData.sessionPatterns ? smartReminders.aiLearningData.sessionPatterns.length : 0} sessions
                   </div>
-                  <div style={{ fontSize: 12, color: isDarkMode ? "#ccc" : "#666" }}>
-                    {smartReminders.scheduledReminders.length} reminders scheduled
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    Confidence level: {Math.round(Math.min((smartReminders && smartReminders.aiLearningData && smartReminders.aiLearningData.sessionPatterns ? smartReminders.aiLearningData.sessionPatterns.length : 0) / 25, 1) * 100)}%
                   </div>
                 </div>
 
-                {smartReminders.optimalTimes.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📊 Your Peak Times:</div>
-                    {smartReminders.optimalTimes.slice(0, 3).map((time, index) => (
-                      <div key={index} style={{
-                        fontSize: 12,
-                        padding: 4,
-                        backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa',
-                        borderRadius: 4,
-                        marginBottom: 4,
-                        display: 'flex',
-                        justifyContent: 'space-between'
-                      }}>
-                        <span>{time.hour}:00</span>
-                        <span>{Math.round(time.successRate * 100)}% success</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Reminder Types:</div>
-                  {['focus', 'break', 'streak'].map(type => (
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>AI Preferences:</div>
+                  {['focus', 'break', 'streak', 'optimization'].map(type => (
                     <label key={type} style={{ 
                       display: 'flex', 
                       alignItems: 'center', 
@@ -1816,58 +1593,37 @@ export default function App() {
                           }));
                         }}
                       />
-                      <span style={{ textTransform: 'capitalize' }}>{type} Reminders</span>
+                      <span style={{ textTransform: 'capitalize' }}>{type} Intelligence</span>
                     </label>
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button 
-                    style={{...currentStyles.smallBtn, flex: 1 }}
-                    onClick={() => {
-                      const suggestions = generateSmartReminderSuggestions();
-                      suggestions.slice(0, 3).forEach(scheduleSmartReminder);
-                      alert(`🤖 Scheduled ${suggestions.length} new smart reminders!`);
-                    }}
-                  >
-                    ⚡ Generate Now
-                  </button>
-                  <button 
-                    style={{...currentStyles.smallBtn, flex: 1 }}
-                    onClick={() => {
-                      clearScheduledReminders();
-                      setSmartReminders(prev => ({ ...prev, enabled: false }));
-                      alert('🔕 Smart reminders disabled');
-                    }}
-                  >
-                    🔕 Disable
-                  </button>
-                </div>
+                <button 
+                  style={{...currentStyles.btn, width: '100%' }}
+                  onClick={() => {
+                    setSmartReminders(prev => ({ ...prev, enabled: false }));
+                    alert('🔕 AI reminders disabled');
+                  }}
+                >
+                  🔕 Disable AI System
+                </button>
               </div>
             ) : (
               <div>
-                <p style={{ fontSize: 13, color: isDarkMode ? "#999" : "#666", marginBottom: 12 }}>
-                  AI analyzes your focus patterns to suggest optimal notification times and automatically schedule smart reminders.
+                <p style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+                  Advanced AI system learns your productivity patterns and provides intelligent recommendations and timing suggestions.
                 </p>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#ccc" : "#777", marginBottom: 12 }}>
-                  <div>🧠 Learns from {history.filter(s => s.mode === 'focus').length} focus sessions</div>
-                  <div>📈 Identifies peak performance times</div>
-                  <div>⏰ Schedules personalized reminders</div>
-                  <div>🎯 Protects streaks intelligently</div>
+                <div style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>
+                  <div>🧠 Deep learning from focus patterns</div>
+                  <div>📈 Productivity optimization</div>
+                  <div>⏰ Intelligent timing suggestions</div>
+                  <div>🎯 Adaptive session recommendations</div>
                 </div>
                 <button 
-                  style={{
-                    ...currentStyles.btn,
-                    width: '100%',
-                    ...(smartReminders.enabled ? {
-                      backgroundColor: getThemeColor(),
-                      color: '#fff',
-                      border: `1px solid ${getThemeColor()}`
-                    } : {})
-                  }} 
+                  style={{...currentStyles.btn, width: '100%' }} 
                   onClick={requestNotificationPermission}
                 >
-                  🤖 Enable Smart Reminders
+                  🤖 Activate AI System
                 </button>
               </div>
             )}
@@ -1883,33 +1639,55 @@ export default function App() {
   const useMobileLayout = isMobile || forceMobileLayout;
 
   // ---------------------- Render ----------------------
-  const currentStyles = isDarkMode ? { ...baseStyles, ...darkStyles } : baseStyles;
+  const currentStyles = monochromeStyles;
 
   return (
-    <div style={{ ...currentStyles.app, ...(isDarkMode ? { backgroundColor: "#1a1a1a", color: "#e0e0e0" } : {}) }}>
-      <style>{isDarkMode ? darkCssStyles : cssStyles}</style>
+    <div style={currentStyles.app}>
+      <style>{monochromeCSS}</style>
+
+      {/* Header */}
       <header style={{
         ...currentStyles.header,
         ...(useMobileLayout ? {
           flexDirection: 'column',
           alignItems: 'stretch',
-          gap: 12,
-          marginBottom: 16
+          gap: 16,
+          marginBottom: 20
         } : {})
       }}>
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
-          gap: 12,
+          gap: 16,
           ...(useMobileLayout ? { justifyContent: 'center' } : {})
         }}>
           <div style={{
-            ...currentStyles.logo,
-            backgroundColor: isDarkMode ? "#ffffff" : "#111",
-            color: isDarkMode ? "#0d1117" : "#fff"
-          }}>FG</div>
-          <h1 style={{ margin: 0, fontSize: useMobileLayout ? 18 : 20 }}>FocusGuard</h1>
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+            backgroundColor: "#000000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative"
+          }}>
+            <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32 8L48 14V26C48 38 40 48 32 54C24 48 16 38 16 26V14L32 8Z" fill="#ffffff"/>
+              <circle cx="32" cy="28" r="10" fill="none" stroke="#000000" strokeWidth="1.5"/>
+              <circle cx="32" cy="28" r="3" fill="#000000"/>
+              <path d="M32 18 A10 10 0 0 1 40.7 22" stroke="#000000" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+              <path d="M40.7 34 A10 10 0 0 1 32 38" stroke="#000000" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+              <path d="M23.3 34 A10 10 0 0 1 23.3 22" stroke="#000000" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: useMobileLayout ? 20 : 24, fontWeight: 700 }}>FocusGuard</h1>
+            <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+              AI-Powered Focus Assistant
+            </div>
+          </div>
         </div>
+
         {customization.showHeaderButtons && customization.headerButtons && (
           <div style={{ 
             display: "grid", 
@@ -1926,28 +1704,24 @@ export default function App() {
             {customization.headerButtons.customize && (
               <button 
                 style={{
-                  ...baseStyles.btn, 
-                  ...(isDarkMode ? baseStyles.darkBtn : {}),
+                  ...currentStyles.btn, 
                   ...(useMobileLayout ? { 
-                    padding: '10px 8px',
-                    fontSize: 14,
-                    whiteSpace: 'nowrap'
+                    padding: '12px 8px',
+                    fontSize: 13
                   } : {})
                 }} 
                 onClick={() => setShowCustomization(!showCustomization)}
               >
-                🎨 Customize
+                ⚙️ Customize
               </button>
             )}
             {customization.headerButtons.analytics && (
               <button 
                 style={{
-                  ...baseStyles.btn, 
-                  ...(isDarkMode ? baseStyles.darkBtn : {}),
+                  ...currentStyles.btn, 
                   ...(useMobileLayout ? { 
-                    padding: '10px 8px',
-                    fontSize: 14,
-                    whiteSpace: 'nowrap'
+                    padding: '12px 8px',
+                    fontSize: 13
                   } : {})
                 }} 
                 onClick={() => setShowAnalytics(!showAnalytics)}
@@ -1955,139 +1729,80 @@ export default function App() {
                 📊 Analytics
               </button>
             )}
+            {customization.headerButtons.aiCoach && (
+              <button 
+                style={{
+                  ...currentStyles.btn, 
+                  ...(useMobileLayout ? { 
+                    padding: '12px 8px',
+                    fontSize: 13
+                  } : {}),
+                  ...(smartReminders.enabled ? {
+                    backgroundColor: '#000',
+                    color: '#fff'
+                  } : {})
+                }} 
+                onClick={() => setShowAICoach(!showAICoach)}
+              >
+                🤖 AI Coach
+              </button>
+            )}
             {customization.headerButtons.layoutToggle && (
               <button 
                 style={{
-                  ...baseStyles.btn, 
-                  ...(isDarkMode ? baseStyles.darkBtn : {}),
+                  ...currentStyles.btn, 
                   ...(useMobileLayout ? { 
-                    padding: '10px 8px',
-                    fontSize: 14,
-                    whiteSpace: 'nowrap'
+                    padding: '12px 8px',
+                    fontSize: 13
                   } : {})
                 }} 
-                onClick={() => setForceMobileLayout(!forceMobileLayout)}
+                onClick={() => {
+                  setForceMobileLayout(!forceMobileLayout);
+                  console.log('Toggle clicked, new state:', !forceMobileLayout);
+                }}
               >
                 {useMobileLayout ? "🖥️ Desktop" : "📱 Mobile"}
-              </button>
-            )}
-            {customization.headerButtons.darkMode && (
-              <button 
-                style={{
-                  ...baseStyles.btn, 
-                  ...(isDarkMode ? baseStyles.darkBtn : {}),
-                  ...(useMobileLayout ? { 
-                    padding: '10px 8px',
-                    fontSize: 14,
-                    whiteSpace: 'nowrap'
-                  } : {})
-                }} 
-                onClick={() => setIsDarkMode(!isDarkMode)}
-              >
-                {isDarkMode ? "☀️ Light" : "🌙 Dark"}
               </button>
             )}
             {customization.headerButtons.notifications && (
               <button 
                 style={{
-                  ...baseStyles.btn, 
-                  ...(isDarkMode ? baseStyles.darkBtn : {}),
+                  ...currentStyles.btn, 
                   ...(useMobileLayout ? { 
-                    padding: '10px 8px',
-                    fontSize: 12,
-                    whiteSpace: 'nowrap'
+                    padding: '12px 8px',
+                    fontSize: 13
                   } : {}),
                   ...(smartReminders.enabled ? {
-                    backgroundColor: getThemeColor(),
-                    color: '#fff',
-                    border: `1px solid ${getThemeColor()}`
+                    backgroundColor: '#000',
+                    color: '#fff'
                   } : {})
                 }} 
                 onClick={requestNotificationPermission}
               >
-                {smartReminders.enabled 
-                  ? (useMobileLayout ? "🤖 Smart" : "🤖 Smart Reminders") 
-                  : (useMobileLayout ? "🔔 Notify" : "Enable Smart Notifications")
-                }
+                {smartReminders.enabled ? "🔔 Smart Notifications" : "Enable Notifications"}
               </button>
-            )}
-            {customization.headerButtons.leaderboard && (
-              <button 
-                style={{
-                  ...baseStyles.btn, 
-                  ...(isDarkMode ? baseStyles.darkBtn : {}),
-                  ...(useMobileLayout ? { 
-                    padding: '10px 8px',
-                    fontSize: 14,
-                    whiteSpace: 'nowrap'
-                  } : {})
-                }} 
-                onClick={() => setShowLeaderboard(!showLeaderboard)}
-              >
-                🏆 Leaderboard
-              </button>
-            )}
-            {customization.headerButtons.auth && (
-              user ? (
-                <button 
-                  style={{
-                    ...baseStyles.btn, 
-                    ...(isDarkMode ? baseStyles.darkBtn : {}),
-                    ...(useMobileLayout ? { 
-                      padding: '10px 8px',
-                      fontSize: 14,
-                      whiteSpace: 'nowrap'
-                    } : {}),
-                    backgroundColor: getThemeColor(),
-                    color: '#fff',
-                    border: `1px solid ${getThemeColor()}`
-                  }} 
-                  onClick={logout}
-                >
-                  👤 {user.username} | Logout
-                </button>
-              ) : (
-                <button 
-                  style={{
-                    ...baseStyles.btn, 
-                    ...(isDarkMode ? baseStyles.darkBtn : {}),
-                    ...(useMobileLayout ? { 
-                      padding: '10px 8px',
-                      fontSize: 14,
-                      whiteSpace: 'nowrap'
-                    } : {})
-                  }} 
-                  onClick={() => setShowAuth(true)}
-                >
-                  🔐 Login
-                </button>
-              )
             )}
             <button 
               style={{
-                ...baseStyles.btn, 
-                ...(isDarkMode ? baseStyles.darkBtn : {}),
+                ...currentStyles.btn, 
                 ...(useMobileLayout ? { 
-                  padding: '10px 8px',
-                  fontSize: 14,
-                  whiteSpace: 'nowrap'
+                  padding: '12px 8px',
+                  fontSize: 13
                 } : {}),
-                backgroundColor: '#dc2626',
-                color: '#fff',
-                border: '1px solid #dc2626'
+                backgroundColor: '#333',
+                color: '#fff'
               }} 
               onClick={() => updateCustomization('showHeaderButtons', false)}
             >
-              ➖ Hide Controls
+              ➖ Hide
             </button>
           </div>
         )}
         {!customization.showHeaderButtons && (
           <button 
             style={{
-              ...baseStyles.btn, 
-              ...(isDarkMode ? baseStyles.darkBtn : {}),
-              padding: '6px 12px',
+              ...currentStyles.btn, 
+              padding: '8px 16px',
               fontSize: 12
             }} 
             onClick={() => updateCustomization('showHeaderButtons', true)}
@@ -2097,128 +1812,44 @@ export default function App() {
         )}
       </header>
 
+      {/* Customization Modal */}
       {showCustomization && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
+        <div style={currentStyles.modalOverlay}>
           <div style={{
-            ...currentStyles.card,
-            maxWidth: useMobileLayout ? '100%' : 500,
+            ...currentStyles.modal,
+            maxWidth: useMobileLayout ? '100%' : 600,
             maxHeight: '90vh',
-            overflow: 'auto',
-            width: '100%'
+            overflow: 'auto'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Customize Your App</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0 }}>Customize Your Experience</h3>
               <button style={currentStyles.iconBtn} onClick={() => setShowCustomization(false)}>✖</button>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <h4>Theme Color</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))', gap: 8 }}>
-                {Object.entries(UNLOCKABLE_THEMES).map(([key, theme]) => (
-                  <button
-                    key={key}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      backgroundColor: theme.primary,
-                      border: customization.theme === key ? '3px solid #fff' : '1px solid #ddd',
-                      cursor: userProgress.level >= theme.unlockLevel ? 'pointer' : 'not-allowed',
-                      opacity: userProgress.level >= theme.unlockLevel ? 1 : 0.5,
-                      position: 'relative',
-                      justifySelf: 'center'
-                    }}
-                    onClick={() => {
-                      if (userProgress.level >= theme.unlockLevel) {
-                        updateCustomization('theme', key);
-                      }
-                    }}
-                    title={`${theme.name} (Level ${theme.unlockLevel})`}
-                  >
-                    {userProgress.level < theme.unlockLevel && (
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 16 }}>🔒</div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <h4>Header Button Visibility</h4>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={customization.showHeaderButtons}
-                    onChange={(e) => updateCustomization('showHeaderButtons', e.target.checked)}
-                  />
-                  <span style={{ fontWeight: 600 }}>Show Header Buttons</span>
-                </label>
-                {customization.showHeaderButtons && (
-                  <div style={{ marginLeft: 20, padding: 8, backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa', borderRadius: 6 }}>
-                    {Object.entries(customization.headerButtons).map(([button, visible]) => (
-                      <label key={button} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 4 }}>
-                        <input
-                          type="checkbox"
-                          checked={visible}
-                          onChange={(e) => {
-                            setCustomization(prev => ({
-                              ...prev,
-                              headerButtons: {
-                                ...prev.headerButtons,
-                                [button]: e.target.checked
-                              }
-                            }));
-                          }}
-                        />
-                        <span style={{ textTransform: 'capitalize' }}>
-                          {button === 'layoutToggle' ? 'Layout Toggle' : 
-                           button === 'darkMode' ? 'Dark Mode' : 
-                           button === 'notifications' ? 'Smart Notifications' : 
-                           button === 'auth' ? 'Login/Account' : button}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <h4>Section Order & Visibility</h4>
-              <div style={{ maxHeight: 200, overflow: 'auto' }}>
+            <div style={{ marginBottom: 20 }}>
+              <h4>Section Visibility & Order</h4>
+              <div style={{ maxHeight: 300, overflow: 'auto' }}>
                 {customization.sectionOrder.map((section, index) => (
                   <div key={section} style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: 8, 
+                    gap: 12, 
                     marginBottom: 8,
-                    padding: 8,
-                    borderRadius: 6,
-                    backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa'
+                    padding: 12,
+                    borderRadius: 8,
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #e0e0e0'
                   }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <button
-                        style={{ ...currentStyles.iconBtn, fontSize: 12, padding: 2 }}
+                        style={{ ...currentStyles.iconBtn, fontSize: 10, padding: 4 }}
                         onClick={() => moveSectionUp(index)}
                         disabled={index === 0}
                       >
                         ▲
                       </button>
                       <button
-                        style={{ ...currentStyles.iconBtn, fontSize: 12, padding: 2 }}
+                        style={{ ...currentStyles.iconBtn, fontSize: 10, padding: 4 }}
                         onClick={() => moveSectionDown(index)}
                         disabled={index === customization.sectionOrder.length - 1}
                       >
@@ -2230,24 +1861,27 @@ export default function App() {
                       checked={customization.visibleSections[section]}
                       onChange={() => toggleSectionVisibility(section)}
                     />
-                    <span style={{ flex: 1, textTransform: 'capitalize', fontSize: 14 }}>
-                      {section === 'smartReminders' ? 'Smart Reminders' : 
-                       section === 'sessionHighlights' ? 'Session Highlights' :
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>
+                      {section === 'aiInsights' ? '🧠 AI Insights' :
+                       section === 'smartRecommendations' ? '🤖 Smart Recommendations' :
+                       section === 'focusAnalytics' ? '📊 Focus Analytics' :
+                       section === 'sessionHighlights' ? '📝 Session Highlights' :
                        section === 'dailyGoals' ? 'Daily Goals' :
-                       section.replace(/([A-Z])/g, ' $1')}
+                       section === 'smartReminders' ? '🤖 Smart Reminders' :
+                       section.charAt(0).toUpperCase() + section.slice(1)}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button style={currentStyles.btn} onClick={() => {
                 setCustomization(DEFAULT_CUSTOMIZATION);
               }}>
-                Reset to Default
+                Reset Defaults
               </button>
-              <button style={currentStyles.btn} onClick={() => setShowCustomization(false)}>
+              <button style={{...currentStyles.btn, backgroundColor: '#000', color: '#fff'}} onClick={() => setShowCustomization(false)}>
                 Save Changes
               </button>
             </div>
@@ -2255,678 +1889,792 @@ export default function App() {
         </div>
       )}
 
-      {/* Authentication Modal */}
-      {showAuth && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
+      {/* AI Coach Modal */}
+      {showAICoach && (
+        <div style={currentStyles.modalOverlay}>
           <div style={{
-            ...currentStyles.card,
-            maxWidth: useMobileLayout ? '100%' : 400,
-            width: '100%'
+            ...currentStyles.modal,
+            maxWidth: useMobileLayout ? '100%' : 700,
+            maxHeight: '90vh',
+            overflow: 'auto'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>{authMode === 'login' ? 'Login' : 'Create Account'}</h3>
-              <button style={currentStyles.iconBtn} onClick={() => setShowAuth(false)}>✖</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                🤖 AI Productivity Coach
+                {smartReminders.enabled && (
+                  <span style={{ 
+                    fontSize: 10, 
+                    backgroundColor: '#000', 
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    fontWeight: 'normal'
+                  }}>
+                    ACTIVE
+                  </span>
+                )}
+              </h3>
+              <button style={currentStyles.iconBtn} onClick={() => setShowAICoach(false)}>✖</button>
             </div>
 
-            <form onSubmit={handleAuth}>
-              {authMode === 'register' && (
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={authForm.username}
-                  onChange={(e) => setAuthForm(prev => ({ ...prev, username: e.target.value }))}
-                  style={{ ...currentStyles.input, width: '100%', marginBottom: 12 }}
-                  required
-                />
-              )}
-              <input
-                type="email"
-                placeholder="Email"
-                value={authForm.email}
-                onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
-                style={{ ...currentStyles.input, width: '100%', marginBottom: 12 }}
-                required
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={authForm.password}
-                onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
-                style={{ ...currentStyles.input, width: '100%', marginBottom: 12 }}
-                required
-              />
+            <div style={{ marginBottom: 20 }}>
+              <h4>🧠 Current AI Analysis</h4>
+              {(() => {
+                const analysis = performDeepAIAnalysis();
+                return (
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                        Confidence Level: {Math.round(analysis.confidence)}%
+                      </div>
+                      <div style={{ 
+                        width: '100%', 
+                        height: 8, 
+                        backgroundColor: '#e0e0e0', 
+                        borderRadius: 4 
+                      }}>
+                        <div style={{ 
+                          width: `${analysis.confidence}%`, 
+                          height: '100%', 
+                          backgroundColor: '#000', 
+                          borderRadius: 4 
+                        }} />
+                      </div>
+                    </div>
 
-              {authError && (
-                <div style={{ 
-                  color: '#dc2626',
-                  fontSize: 12,
-                  marginBottom: 12,
-                  padding: 8,
-                  backgroundColor: isDarkMode ? '#5d1a1a' : '#fef2f2',
-                  borderRadius: 6
-                }}>
-                  {authError}
-                </div>
-              )}
+                    {analysis.insights.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Key Insights:</div>
+                        {analysis.insights.map((insight, i) => (
+                          <div key={i} style={{ 
+                            padding: 10, 
+                            backgroundColor: '#f0f9ff', 
+                            border: '1px solid #3b82f6',
+                            borderRadius: 6, 
+                            marginBottom: 6,
+                            fontSize: 13
+                          }}>
+                            💡 {insight}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                <button
-                  type="submit"
-                  style={{
-                    ...currentStyles.btn,
-                    flex: 1,
-                    backgroundColor: getThemeColor(),
-                    color: '#fff',
-                    border: 'none'
-                  }}
-                >
-                  {authMode === 'login' ? 'Login' : 'Create Account'}
-                </button>
-              </div>
-            </form>
+                    {analysis.predictions.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>AI Predictions:</div>
+                        {analysis.predictions.map((pred, i) => (
+                          <div key={i} style={{ 
+                            padding: 12, 
+                            backgroundColor: '#f0fdf4', 
+                            border: '1px solid #22c55e',
+                            borderRadius: 6,
+                            fontSize: 13
+                          }}>
+                            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                              🔮 Next Session Success: {pred.score}%
+                            </div>
+                            {pred.factors.map((factor, j) => (
+                              <div key={j} style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>
+                                • {factor}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
 
-            <div style={{ textAlign: 'center' }}>
-              <button
-                style={{ ...currentStyles.smallBtn, background: 'transparent', color: getThemeColor() }}
+            <div style={{ marginBottom: 20 }}>
+              <h4>🎯 Smart Recommendations</h4>
+              {(() => {
+                const recommendations = getEnhancedAIRecommendations();
+                return recommendations.length === 0 ? (
+                  <div style={{ color: '#666', fontStyle: 'italic' }}>
+                    Complete more sessions to unlock personalized AI recommendations.
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: 300, overflow: 'auto' }}>
+                    {recommendations.map((rec, i) => (
+                      <div key={i} style={{
+                        padding: 12,
+                        backgroundColor: '#f8f9fa',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 8,
+                        marginBottom: 10
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 16 }}>{rec.icon}</span>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{rec.title}</span>
+                          <span style={{ 
+                            fontSize: 10, 
+                            backgroundColor: rec.priority === 'high' ? '#dc2626' : rec.priority === 'medium' ? '#f59e0b' : '#3b82f6',
+                            color: '#fff',
+                            padding: '2px 6px',
+                            borderRadius: 8,
+                            textTransform: 'uppercase'
+                          }}>
+                            {rec.priority}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                          {rec.description}
+                        </div>
+                        {rec.action && (
+                          <button
+                            style={{
+                              ...currentStyles.smallBtn,
+                              backgroundColor: '#000',
+                              color: '#fff',
+                              border: 'none'
+                            }}
+                            onClick={() => {
+                              rec.action();
+                              setUserProgress(prev => ({ 
+                                ...prev, 
+                                aiRecommendationsFollowed: prev.aiRecommendationsFollowed + 1 
+                              }));
+                              alert('🤖 AI recommendation applied successfully!');
+                            }}
+                          >
+                            Apply Recommendation
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between' }}>
+              <button 
+                style={currentStyles.btn}
                 onClick={() => {
-                  setAuthMode(authMode === 'login' ? 'register' : 'login');
-                  setAuthError('');
+                  const analysis = performDeepAIAnalysis();
+                  const report = {
+                    timestamp: new Date().toISOString(),
+                    userProgress,
+                    sessionHistory: history,
+                    aiLearningData: smartReminders.aiLearningData,
+                    analysis: analysis,
+                    recommendations: getEnhancedAIRecommendations()
+                  };
+
+                  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `ai_analysis_${new Date().toISOString().slice(0, 10)}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
                 }}
               >
-                {authMode === 'login' ? 'Need an account? Sign up' : 'Have an account? Login'}
+                📥 Export AI Report
+              </button>
+              <button 
+                style={{...currentStyles.btn, backgroundColor: '#000', color: '#fff'}}
+                onClick={() => setShowAICoach(false)}
+              >
+                Close Coach
               </button>
             </div>
-
-            <div style={{ 
-              marginTop: 16, 
-              padding: 12, 
-              backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa',
-              borderRadius: 8,
-              fontSize: 12,
-              color: isDarkMode ? '#999' : '#666'
-            }}>
-              <strong>Why create an account?</strong>
-              <ul style={{ margin: '8px 0', paddingLeft: 16 }}>
-                <li>Save your progress across devices</li>
-                <li>Compete on the global leaderboard</li>
-                <li>Sync your achievements and streaks</li>
-                <li>Access advanced analytics</li>
-              </ul>
-              <em>Guests can still use all features locally!</em>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Live Leaderboard Modal */}
-      {showLeaderboard && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
-          <div style={{
-            ...currentStyles.card,
-            maxWidth: useMobileLayout ? '100%' : 600,
-            maxHeight: '90vh',
-            overflow: 'auto',
-            width: '100%'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>🏆 Live Leaderboard</h3>
-              <button style={currentStyles.iconBtn} onClick={() => setShowLeaderboard(false)}>✖</button>
-            </div>
-
-            {!user && (
-              <div style={{ 
-                marginBottom: 16, 
-                padding: 12, 
-                backgroundColor: isDarkMode ? '#5d1a1a' : '#fef2f2',
-                borderRadius: 8,
-                border: '1px solid #f59e0b'
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>🔐 Account Required</div>
-                <div style={{ fontSize: 13, marginBottom: 8 }}>
-                  Create an account to see your rank and compete with others!
-                </div>
-                <button 
-                  style={{ ...currentStyles.smallBtn, backgroundColor: getThemeColor(), color: '#fff' }}
-                  onClick={() => { setShowLeaderboard(false); setShowAuth(true); }}
-                >
-                  Create Account
-                </button>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ 
-                fontSize: 12, 
-                color: isDarkMode ? '#999' : '#666',
-                display: 'flex',
-                justifyContent: 'space-between'
-              }}>
-                <span>Updates every 30 seconds</span>
-                <span>{leaderboard.length} players</span>
-              </div>
-            </div>
-
-            <div style={{ maxHeight: 400, overflow: 'auto' }}>
-              {leaderboard.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  color: isDarkMode ? '#999' : '#666',
-                  padding: 40
-                }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>🏁</div>
-                  <div>No players yet!</div>
-                  <div style={{ fontSize: 13, marginTop: 8 }}>
-                    Be the first to create an account and start climbing!
-                  </div>
-                </div>
-              ) : (
-                leaderboard.map((player, index) => (
-                  <div 
-                    key={player.id} 
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 12,
-                      marginBottom: 8,
-                      borderRadius: 8,
-                      backgroundColor: user?.id === player.id ? 
-                        (isDarkMode ? '#1a5d2e' : '#f0fdf4') : 
-                        (isDarkMode ? '#21262d' : '#f8f9fa'),
-                      border: user?.id === player.id ? 
-                        `2px solid ${getThemeColor()}` : 
-                        `1px solid ${isDarkMode ? '#30363d' : '#e0e0e0'}`
-                    }}
-                  >
-                    <div style={{ 
-                      width: 32, 
-                      textAlign: 'center', 
-                      fontWeight: 700,
-                      fontSize: 16,
-                      color: index < 3 ? (index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : '#cd7f32') : 'inherit'
-                    }}>
-                      {index < 3 ? (index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉') : `#${player.rank}`}
-                    </div>
-                    <div style={{ flex: 1, marginLeft: 12 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {player.username}
-                        {user?.id === player.id && <span style={{ fontSize: 12, color: getThemeColor() }}>(You)</span>}
-                      </div>
-                      <div style={{ fontSize: 12, color: isDarkMode ? '#999' : '#666' }}>
-                        Level {player.level} • {player.xp} XP • {Math.round(player.totalFocusMinutes)}min focused
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 12, color: isDarkMode ? '#999' : '#666' }}>
-                        🔥 {player.streakCount} • ✅ {player.totalTasks}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div style={{ 
-              marginTop: 16,
-              padding: 12,
-              backgroundColor: isDarkMode ? '#21262d' : '#f8f9fa',
-              borderRadius: 8,
-              fontSize: 12,
-              color: isDarkMode ? '#999' : '#666'
-            }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>🎯 How Rankings Work:</div>
-              <div>• Ranked by total XP earned</div>
-              <div>• XP earned from focus sessions and completed tasks</div>
-              <div>• Updates automatically when you sync progress</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Advanced Analytics Dashboard Modal */}
+      {/* Analytics Dashboard Modal */}
       {showAnalytics && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
+        <div style={currentStyles.modalOverlay}>
           <div style={{
-            ...currentStyles.card,
-            maxWidth: useMobileLayout ? '100%' : 800,
+            ...currentStyles.modal,
+            maxWidth: useMobileLayout ? '100%' : 1100,
             maxHeight: '90vh',
-            overflow: 'auto',
-            width: '100%'
+            overflow: 'auto'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Analytics Dashboard 📊</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0 }}>📊 Advanced Analytics Dashboard</h3>
               <button style={currentStyles.iconBtn} onClick={() => setShowAnalytics(false)}>✖</button>
             </div>
 
-            {/* Progress Overview Cards */}
+            {/* Key Metrics Grid */}
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: useMobileLayout ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
-              gap: 12,
-              marginBottom: 20
+              gap: 16,
+              marginBottom: 24
             }}>
-              <div style={{ ...currentStyles.card, textAlign: 'center', padding: 12 }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: getThemeColor() }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: 16, 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: 8,
+                border: '2px solid #000',
+                boxShadow: '2px 2px 0px #000'
+              }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#000' }}>
                   {calculateLevel(userProgress.xp)}
                 </div>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>Current Level</div>
-              </div>
-              <div style={{ ...currentStyles.card, textAlign: 'center', padding: 12 }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: getThemeColor() }}>
-                  {userProgress.xp}
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Current Level</div>
+                <div style={{ fontSize: 10, color: "#888" }}>
+                  {userProgress.xp} / {getXPForNextLevel(userProgress.xp)} XP
                 </div>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>Total XP</div>
               </div>
-              <div style={{ ...currentStyles.card, textAlign: 'center', padding: 12 }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: getThemeColor() }}>
-                  {Math.round(userProgress.totalFocusMinutes)}
+              <div style={{ 
+                textAlign: 'center', 
+                padding: 16, 
+                backgroundColor: '#f0fdf4', 
+                borderRadius: 8,
+                border: '2px solid #22c55e',
+                boxShadow: '2px 2px 0px #22c55e'
+              }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#22c55e' }}>
+                  {history.filter(s => s.mode === 'focus').length}
                 </div>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>Focus Minutes</div>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Total Sessions</div>
+                <div style={{ fontSize: 10, color: "#888" }}>
+                  {Math.round(userProgress.totalFocusMinutes)} min total
+                </div>
               </div>
-              <div style={{ ...currentStyles.card, textAlign: 'center', padding: 12 }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: getThemeColor() }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: 16, 
+                backgroundColor: '#fef3c7', 
+                borderRadius: 8,
+                border: '2px solid #f59e0b',
+                boxShadow: '2px 2px 0px #f59e0b'
+              }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b' }}>
+                  {Math.round((history.filter(s => s.mode === 'focus' && s.durationSec >= settings.focusMinutes * 60 * 0.8).length / Math.max(history.filter(s => s.mode === 'focus').length, 1)) * 100)}%
+                </div>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Success Rate</div>
+                <div style={{ fontSize: 10, color: "#888" }}>
+                  {history.filter(s => s.mode === 'focus' && s.durationSec >= settings.focusMinutes * 60 * 0.8).length} / {history.filter(s => s.mode === 'focus').length} completed
+                </div>
+              </div>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: 16, 
+                backgroundColor: '#e0f2fe', 
+                borderRadius: 8,
+                border: '2px solid #3b82f6',
+                boxShadow: '2px 2px 0px #3b82f6'
+              }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#3b82f6' }}>
                   {userProgress.streakCount}
                 </div>
-                <div style={{ fontSize: 12, color: isDarkMode ? "#999" : "#666" }}>Day Streak</div>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Day Streak</div>
+                <div style={{ fontSize: 10, color: "#888" }}>
+                  {userProgress.aiRecommendationsFollowed} AI insights used
+                </div>
               </div>
             </div>
 
-            {/* Chart Visualizations */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: useMobileLayout ? '1fr' : 'repeat(2, 1fr)', 
-              gap: 16,
-              marginBottom: 16
-            }}>
-              {/* Focus Session Trend Chart */}
-              <div style={currentStyles.card}>
-                <h4 style={{ marginTop: 0 }}>📈 Focus Session Trends (Last 7 Days)</h4>
-                <div style={{ height: 150, position: 'relative' }}>
+            {/* Charts Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: useMobileLayout ? '1fr' : '1fr 1fr', gap: 20, marginBottom: 24 }}>
+
+              {/* Productivity Trend Chart */}
+              <div style={{ 
+                backgroundColor: '#fff', 
+                border: '2px solid #000', 
+                borderRadius: 8, 
+                padding: 16,
+                boxShadow: '3px 3px 0px #000'
+              }}>
+                <h4 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  📈 Productivity Trend
+                  <span style={{ fontSize: 12, color: '#666' }}>(Last 20 Sessions)</span>
+                </h4>
+                <div style={{ 
+                  height: 140, 
+                  display: 'flex',
+                  alignItems: 'end',
+                  gap: 3,
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: 4,
+                  padding: 8,
+                  border: '1px solid #e0e0e0'
+                }}>
                   {(() => {
-                    const last7Days = Array.from({length: 7}, (_, i) => {
-                      const date = new Date();
-                      date.setDate(date.getDate() - (6 - i));
-                      return date.toISOString().slice(0, 10);
-                    });
-
-                    const dailyData = last7Days.map(date => {
-                      const daysSessions = history.filter(s => 
-                        s.mode === 'focus' && 
-                        new Date(s.startTime).toISOString().slice(0, 10) === date
-                      );
-                      return {
-                        date,
-                        sessions: daysSessions.length,
-                        minutes: Math.round(daysSessions.reduce((sum, s) => sum + s.durationSec / 60, 0))
-                      };
-                    });
-
-                    const maxMinutes = Math.max(...dailyData.map(d => d.minutes), 1);
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'end', height: '100%', gap: 8 }}>
-                        {dailyData.map((day, i) => (
-                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <div 
-                              style={{
-                                width: '100%',
-                                backgroundColor: getThemeColor(),
-                                height: `${(day.minutes / maxMinutes) * 120}px`,
-                                marginBottom: 4,
-                                borderRadius: 2,
-                                minHeight: day.minutes > 0 ? 4 : 0
-                              }}
-                              title={`${day.minutes} minutes, ${day.sessions} sessions`}
-                            />
-                            <div style={{ 
-                              fontSize: 10, 
-                              color: isDarkMode ? "#999" : "#666",
-                              transform: 'rotate(-45deg)',
-                              transformOrigin: 'center'
-                            }}>
-                              {new Date(day.date).toLocaleDateString('en', { weekday: 'short' })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Task Completion Chart */}
-              <div style={currentStyles.card}>
-                <h4 style={{ marginTop: 0 }}>✅ Task Completion Progress</h4>
-                <div style={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {(() => {
-                    const completedTasks = tasks.filter(t => t.done).length;
-                    const totalTasks = tasks.length;
-                    const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-                    const circumference = 2 * Math.PI * 45;
-                    const offset = circumference - (completionRate / 100) * circumference;
-
-                    return (
-                      <div style={{ position: 'relative', width: 120, height: 120 }}>
-                        <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
-                          <circle
-                            cx="60"
-                            cy="60"
-                            r="45"
-                            fill="none"
-                            stroke={isDarkMode ? "#30363d" : "#e0e0e0"}
-                            strokeWidth="8"
-                          />
-                          <circle
-                            cx="60"
-                            cy="60"
-                            r="45"
-                            fill="none"
-                            stroke={getThemeColor()}
-                            strokeWidth="8"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={offset}
-                            strokeLinecap="round"
-                          />
-                        </svg>
+                    const scores = (smartReminders && smartReminders.aiLearningData && smartReminders.aiLearningData.productivityScores) 
+                      ? smartReminders.aiLearningData.productivityScores.slice(-20) 
+                      : [];
+                    return scores.length > 0 ? scores.map((score, i) => (
+                      <div key={i} style={{
+                        flex: 1,
+                        backgroundColor: score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#dc2626',
+                        height: `${Math.max(score || 0, 5)}%`,
+                        minHeight: 4,
+                        borderRadius: 2,
+                        position: 'relative',
+                        cursor: 'pointer'
+                      }} title={`Session ${i + 1}: ${score || 0}% productivity`}>
                         <div style={{
                           position: 'absolute',
-                          top: '50%',
+                          bottom: -20,
                           left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          textAlign: 'center'
+                          transform: 'translateX(-50%)',
+                          fontSize: 8,
+                          color: '#666',
+                          whiteSpace: 'nowrap'
                         }}>
-                          <div style={{ fontSize: 18, fontWeight: 700 }}>
-                            {Math.round(completionRate)}%
-                          </div>
-                          <div style={{ fontSize: 10, color: isDarkMode ? "#999" : "#666" }}>
-                            {completedTasks}/{totalTasks}
-                          </div>
+                          {i % 5 === 0 ? i + 1 : ''}
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Hourly Performance Heatmap */}
-              <div style={currentStyles.card}>
-                <h4 style={{ marginTop: 0 }}>🕒 Peak Performance Hours</h4>
-                <div style={{ height: 150 }}>
-                  {(() => {
-                    const hourlyData = Array.from({length: 24}, (_, hour) => {
-                      const hourSessions = history.filter(s => 
-                        s.mode === 'focus' && 
-                        new Date(s.startTime).getHours() === hour
-                      );
-                      const completedSessions = hourSessions.filter(s => 
-                        s.durationSec >= (settings.focusMinutes * 60 * 0.8)
-                      );
-                      return {
-                        hour,
-                        total: hourSessions.length,
-                        completed: completedSessions.length,
-                        rate: hourSessions.length > 0 ? completedSessions.length / hourSessions.length : 0
-                      };
-                    });
-
-                    const maxTotal = Math.max(...hourlyData.map(d => d.total), 1);
-
-                    return (
+                    )) : (
                       <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(12, 1fr)', 
-                        gap: 2,
-                        height: '100%'
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        color: '#666',
+                        fontSize: 14
                       }}>
-                        {hourlyData.map((data, i) => (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {i % 2 === 0 && (
-                              <div style={{ 
-                                fontSize: 8, 
-                                color: isDarkMode ? "#999" : "#666",
-                                textAlign: 'center',
-                                height: 12
-                              }}>
-                                {i}
-                              </div>
-                            )}
-                            <div
-                              style={{
-                                flex: 1,
-                                backgroundColor: data.total > 0 ? 
-                                  `${getThemeColor()}${Math.floor(255 * (data.total / maxTotal)).toString(16).padStart(2, '0')}` :
-                                  (isDarkMode ? '#30363d' : '#f0f0f0'),
-                                borderRadius: 2,
-                                minHeight: 4
-                              }}
-                              title={`${data.hour}:00 - ${data.total} sessions (${Math.round(data.rate * 100)}% success)`}
-                            />
-                          </div>
-                        ))}
+                        Complete more sessions to see productivity trends
                       </div>
                     );
                   })()}
                 </div>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  marginTop: 12,
+                  fontSize: 10,
+                  color: '#666'
+                }}>
+                  <span>🔴 Low (&lt;60%)</span>
+                  <span>🟡 Medium (60-79%)</span>
+                  <span>🟢 High (80%+)</span>
+                </div>
               </div>
 
-              {/* Achievement Progress */}
-              <div style={currentStyles.card}>
-                <h4 style={{ marginTop: 0 }}>🏆 Achievement Progress</h4>
-                <div style={{ height: 150, overflow: 'auto' }}>
-                  {userProgress.achievements.map(achievement => (
-                    <div key={achievement.id} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: 4,
-                      marginBottom: 4,
-                      borderRadius: 4,
-                      backgroundColor: achievement.unlocked ? 
-                        (isDarkMode ? '#1a5d2e' : '#f0fdf4') : 
-                        (isDarkMode ? '#21262d' : '#f8f9fa'),
-                      opacity: achievement.unlocked ? 1 : 0.6
+              {/* Weekly Activity Heatmap */}
+              <div style={{ 
+                backgroundColor: '#fff', 
+                border: '2px solid #000', 
+                borderRadius: 8, 
+                padding: 16,
+                boxShadow: '3px 3px 0px #000'
+              }}>
+                <h4 style={{ margin: '0 0 16px 0' }}>🗓️ Weekly Activity Pattern</h4>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(7, 1fr)', 
+                  gap: 4,
+                  marginBottom: 8
+                }}>
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
+                    <div key={day} style={{ 
+                      fontSize: 10, 
+                      textAlign: 'center', 
+                      fontWeight: 600, 
+                      color: '#666',
+                      marginBottom: 4
                     }}>
-                      <span style={{ fontSize: 16 }}>{achievement.icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {achievement.name}
-                        </div>
-                        <div style={{ fontSize: 10, color: isDarkMode ? "#999" : "#666" }}>
-                          {achievement.unlocked ? '✅ Unlocked' : '🔒 Locked'}
-                        </div>
-                      </div>
+                      {day}
                     </div>
                   ))}
                 </div>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(7, 1fr)', 
+                  gap: 4
+                }}>
+                  {(() => {
+                    const weeklyData = Array(7).fill(0);
+                    history.filter(s => s.mode === 'focus').forEach(session => {
+                      const day = new Date(session.startTime).getDay();
+                      weeklyData[day]++;
+                    });
+                    const maxSessions = Math.max(...weeklyData, 1);
+
+                    return weeklyData.map((count, i) => (
+                      <div key={i} style={{
+                        height: 40,
+                        backgroundColor: count === 0 ? '#f0f0f0' : 
+                                        count <= maxSessions * 0.25 ? '#dcfce7' :
+                                        count <= maxSessions * 0.5 ? '#bbf7d0' :
+                                        count <= maxSessions * 0.75 ? '#86efac' : '#22c55e',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: count > maxSessions * 0.5 ? '#fff' : '#000'
+                      }} title={`${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i]}: ${count} sessions`}>
+                        {count}
+                      </div>
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
 
-            {/* Download Reports */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button 
-                style={currentStyles.btn}
-                onClick={() => {
-                  const csvData = [
-                    ['Date', 'Mode', 'Duration (minutes)', 'Completed'],
-                    ...history.map(session => [
-                      new Date(session.startTime).toISOString().slice(0, 10),
-                      session.mode,
-                      Math.round(session.durationSec / 60),
-                      session.mode === 'focus' && session.durationSec >= (settings.focusMinutes * 60 * 0.8) ? 'Yes' : 'No'
-                    ])
-                  ].map(row => row.join(',')).join('\n');
+            {/* Session Timeline & Performance */}
+            <div style={{ marginBottom: 24 }}>
+              <h4>⏰ Session Timeline & Performance</h4>
+              <div style={{ 
+                backgroundColor: '#f8f9fa', 
+                border: '1px solid #e0e0e0', 
+                borderRadius: 8, 
+                padding: 16,
+                maxHeight: 200,
+                overflow: 'auto'
+              }}>
+                {history.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#666', padding: 20 }}>
+                    No session data available. Start focusing to see your timeline!
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {history.slice(0, 10).map((session, i) => (
+                      <div key={session.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        backgroundColor: '#fff',
+                        borderRadius: 6,
+                        border: '1px solid #e0e0e0',
+                        fontSize: 13
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            backgroundColor: session.mode === 'focus' ? 
+                              (session.durationSec >= settings.focusMinutes * 60 * 0.8 ? '#22c55e' : '#f59e0b') : 
+                              '#3b82f6'
+                          }} />
+                          <div>
+                            <div style={{ fontWeight: 600 }}>
+                              {session.mode === 'focus' ? '🎯 Focus' : 
+                               session.mode === 'short' ? '☕ Short Break' : 
+                               '🧘 Long Break'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>
+                              {new Date(session.startTime).toLocaleDateString()} at {new Date(session.startTime).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 600 }}>{formatTime(session.durationSec)}</div>
+                          {session.productivityScore && (
+                            <div style={{ fontSize: 10, color: '#666' }}>
+                              {session.productivityScore}% productive
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {history.length > 10 && (
+                      <div style={{ textAlign: 'center', color: '#666', fontSize: 12, fontStyle: 'italic' }}>
+                        ... and {history.length - 10} more sessions
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
-                  const blob = new Blob([csvData], { type: 'text/csv' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `focusguard_analytics_${new Date().toISOString().slice(0, 10)}.csv`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                📊 Download CSV Report
-              </button>
-              <button 
-                style={currentStyles.btn}
-                onClick={() => {
-                  const reportData = {
-                    generatedAt: new Date().toISOString(),
-                    userProgress,
-                    sessionHistory: history,
-                    analytics: {
-                      totalSessions: history.length,
-                      focusSessions: history.filter(s => s.mode === 'focus').length,
-                      averageSessionLength: Math.round(history.reduce((sum, s) => sum + s.durationSec, 0) / history.length / 60) || 0,
-                      completionRate: Math.round((history.filter(s => s.mode === 'focus' && s.durationSec >= settings.focusMinutes * 60 * 0.8).length / Math.max(history.filter(s => s.mode === 'focus').length, 1)) * 100)
-                    }
-                  };
+            {/* AI Insights Summary */}
+            {smartReminders?.aiLearningData?.sessionPatterns?.length >= 5 && (
+              <div style={{ marginBottom: 24 }}>
+                <h4>🧠 AI Insights & Predictions</h4>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: useMobileLayout ? '1fr' : '1fr 1fr', 
+                  gap: 16 
+                }}>
+                  {(() => {
+                    const analysis = performDeepAIAnalysis();
+                    return (
+                      <>
+                        <div style={{ 
+                          backgroundColor: '#f0f9ff', 
+                          border: '2px solid #3b82f6', 
+                          borderRadius: 8, 
+                          padding: 16,
+                          boxShadow: '2px 2px 0px #3b82f6'
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: 8 }}>Key Insights</div>
+                          {analysis.insights.slice(0, 3).map((insight, i) => (
+                            <div key={i} style={{ 
+                              fontSize: 13, 
+                              marginBottom: 6,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 6
+                            }}>
+                              <span>💡</span>
+                              <span>{insight}</span>
+                            </div>
+                          ))}
+                          {analysis.insights.length === 0 && (
+                            <div style={{ color: '#666', fontStyle: 'italic' }}>
+                              Complete more sessions for AI insights
+                            </div>
+                          )}
+                        </div>
 
-                  const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `focusguard_full_report_${new Date().toISOString().slice(0, 10)}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  URL.revokeObjectURL(url);
-                }}
+                        <div style={{ 
+                          backgroundColor: '#f0fdf4', 
+                          border: '2px solid #22c55e', 
+                          borderRadius: 8, 
+                          padding: 16,
+                          boxShadow: '2px 2px 0px #22c55e'
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: 8 }}>Next Session Prediction</div>
+                          {analysis.predictions.length > 0 ? (
+                            <div>
+                              <div style={{ 
+                                fontSize: 24, 
+                                fontWeight: 700, 
+                                color: '#22c55e',
+                                marginBottom: 4
+                              }}>
+                                {analysis.predictions[0].score}%
+                              </div>
+                              <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                                Success probability
+                              </div>
+                              <div style={{ fontSize: 11 }}>
+                                Confidence: {Math.round(analysis.confidence)}%
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ color: '#666', fontStyle: 'italic' }}>
+                              Analyzing patterns...
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Export Actions */}
+            <div style={{ 
+              display: 'flex', 
+              gap: 12, 
+              justifyContent: 'space-between',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button 
+                  style={currentStyles.btn}
+                  onClick={() => {
+                    const csvData = [
+                      ["Date", "Mode", "Duration (min)", "Success", "Productivity Score"],
+                      ...history.map(s => [
+                        new Date(s.startTime).toISOString().slice(0, 10),
+                        s.mode,
+                        Math.round(s.durationSec / 60),
+                        s.mode === 'focus' && s.durationSec >= settings.focusMinutes * 60 * 0.8 ? 'Yes' : 'No',
+                        s.productivityScore || 'N/A'
+                      ])
+                    ].map(row => row.join(',')).join('\n');
+
+                    const blob = new Blob([csvData], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `focusguard_analytics_${new Date().toISOString().slice(0, 10)}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  📊 Export CSV
+                </button>
+                <button 
+                  style={currentStyles.btn}
+                  onClick={() => {
+                    const analyticsData = {
+                      timestamp: new Date().toISOString(),
+                      userProgress,
+                      sessionHistory: history,
+                      aiLearningData: smartReminders?.aiLearningData || {},
+                      analysis: smartReminders?.aiLearningData?.sessionPatterns?.length >= 5 ? performDeepAIAnalysis() : {},
+                      recommendations: getEnhancedAIRecommendations()
+                    };
+
+                    const blob = new Blob([JSON.stringify(analyticsData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `focusguard_complete_analytics_${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  📥 Export JSON
+                </button>
+              </div>
+              <button 
+                style={{...currentStyles.btn, backgroundColor: '#000', color: '#fff'}}
+                onClick={() => setShowAnalytics(false)}
               >
-                📋 Download Full Report
+                Close Dashboard
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Main Content */}
       <main style={{
         ...currentStyles.main,
-        gridTemplateColumns: useMobileLayout ? "1fr" : "1fr 360px",
-        gap: useMobileLayout ? 12 : 16
+        gridTemplateColumns: useMobileLayout ? "1fr" : "2fr 1fr",
+        gap: useMobileLayout ? 16 : 24
       }}>
+        {/* Timer Section */}
         <section style={currentStyles.leftCol}>
           <div style={{
             ...currentStyles.timerCard,
-            padding: useMobileLayout ? 16 : 12
+            padding: useMobileLayout ? 24 : 32,
+            textAlign: 'center'
           }}>
-            <div style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center",
-              ...(useMobileLayout ? { flexDirection: 'column', gap: 12, textAlign: 'center' } : {})
-            }}>
-              <div>
-                <div style={{ fontSize: 12, color: "#666" }}>Mode</div>
-                <div style={{ fontWeight: 700, fontSize: useMobileLayout ? 16 : 14 }}>
-                  {mode === "focus" ? "Focus" : mode === "short" ? "Short Break" : "Long Break"}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 14, color: "#666", marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+                {mode === "focus" ? "FOCUS SESSION" : mode === "short" ? "SHORT BREAK" : "LONG BREAK"}
+              </div>
+              <div style={{ fontSize: useMobileLayout ? 48 : 64, fontWeight: 300, fontFamily: 'monospace', letterSpacing: 2 }}>
+                {formatTime(remaining)}
+              </div>
+              {smartReminders && smartReminders.enabled && smartReminders.aiLearningData && smartReminders.aiLearningData.productivityScores && smartReminders.aiLearningData.productivityScores.length > 0 && (
+                <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                  AI Prediction: {(() => {
+                    const analysis = performDeepAIAnalysis();
+                    return analysis && analysis.predictions && analysis.predictions.length > 0 ? `${analysis.predictions[0].score}% success` : 'Learning...';
+                  })()}
                 </div>
-              </div>
-              <div style={{ textAlign: useMobileLayout ? "center" : "right" }}>
-                <div style={{ fontSize: 12, color: "#666" }}>Remaining</div>
-                <div style={{ fontSize: useMobileLayout ? 32 : 28, fontWeight: 700 }}>{formatTime(remaining)}</div>
-              </div>
+              )}
             </div>
 
             <div style={{ 
               display: "flex", 
-              gap: 8, 
-              marginTop: 16,
+              gap: 16, 
+              marginBottom: 20,
+              justifyContent: 'center',
               ...(useMobileLayout ? { flexDirection: 'column' } : {})
             }}>
               {!running ? (
-                <button style={{ ...currentStyles.btn, flex: 1, padding: useMobileLayout ? '12px' : '8px 12px' }} onClick={startTimer}>Start</button>
+                <button style={{ 
+                  ...currentStyles.primaryBtn, 
+                  padding: useMobileLayout ? '16px 32px' : '12px 24px',
+                  fontSize: useMobileLayout ? 16 : 14
+                }} onClick={startTimer}>
+                  ▶ Start
+                </button>
               ) : (
-                <button style={{ ...currentStyles.btn, flex: 1, padding: useMobileLayout ? '12px' : '8px 12px' }} onClick={pauseTimer}>Pause</button>
+                <button style={{ 
+                  ...currentStyles.primaryBtn, 
+                  padding: useMobileLayout ? '16px 32px' : '12px 24px',
+                  fontSize: useMobileLayout ? 16 : 14
+                }} onClick={pauseTimer}>
+                  ⏸ Pause
+                </button>
               )}
-              <button style={{ ...currentStyles.btn, flex: 1, padding: useMobileLayout ? '12px' : '8px 12px' }} onClick={resetTimer}>Reset</button>
+              <button style={{ 
+                ...currentStyles.btn, 
+                padding: useMobileLayout ? '16px 32px' : '12px 24px',
+                fontSize: useMobileLayout ? 16 : 14
+              }} onClick={resetTimer}>
+                🔄 Reset
+              </button>
             </div>
 
             <div style={{ 
-              marginTop: 12, 
               display: "grid", 
               gridTemplateColumns: useMobileLayout ? '1fr' : 'repeat(3, 1fr)',
-              gap: 8 
+              gap: 12,
+              maxWidth: 360,
+              margin: '0 auto'
             }}>
-              <button style={{...currentStyles.smallBtn, padding: useMobileLayout ? '10px' : '6px 8px'}} onClick={() => { setMode("focus"); resetTimer(); }}>Focus</button>
-              <button style={{...currentStyles.smallBtn, padding: useMobileLayout ? '10px' : '6px 8px'}} onClick={() => { setMode("short"); resetTimer(); }}>Short Break</button>
-              <button style={{...currentStyles.smallBtn, padding: useMobileLayout ? '10px' : '6px 8px'}} onClick={() => { setMode("long"); resetTimer(); }}>Long Break</button>
+              <button 
+                style={{
+                  ...currentStyles.modeBtn, 
+                  ...(mode === 'focus' ? { backgroundColor: '#000', color: '#fff' } : {}),
+                  padding: useMobileLayout ? '12px' : '8px 12px'
+                }} 
+                onClick={() => { setMode("focus"); resetTimer(); }}
+              >
+                Focus
+              </button>
+              <button 
+                style={{
+                  ...currentStyles.modeBtn, 
+                  ...(mode === 'short' ? { backgroundColor: '#000', color: '#fff' } : {}),
+                  padding: useMobileLayout ? '12px' : '8px 12px'
+                }} 
+                onClick={() => { setMode("short"); resetTimer(); }}
+              >
+                Short Break
+              </button>
+              <button 
+                style={{
+                  ...currentStyles.modeBtn, 
+                  ...(mode === 'long' ? { backgroundColor: '#000', color: '#fff' } : {}),
+                  padding: useMobileLayout ? '12px' : '8px 12px'
+                }} 
+                onClick={() => { setMode("long"); resetTimer(); }}
+              >
+                Long Break
+              </button>
             </div>
           </div>
         </section>
 
+        {/* Sidebar */}
         <aside style={{
           ...currentStyles.rightCol,
-          ...(useMobileLayout ? { marginTop: 8 } : {})
+          ...(useMobileLayout ? { marginTop: 16 } : {})
         }}>
           {customization.sectionOrder.map(renderSection)}
 
+          {/* Quick Tips */}
           <div style={currentStyles.card}>
-            <h3 style={{ marginTop: 0 }}>Quick Tips</h3>
-            <ol style={{ margin: 0, paddingLeft: 18, fontSize: useMobileLayout ? 14 : 13 }}>
-              <li>Earn XP for every minute of focus time!</li>
-              <li>Complete tasks and goals to unlock achievements.</li>
-              <li>Maintain streaks to boost your productivity.</li>
-              <li>Unlock new themes and sounds as you level up.</li>
-            </ol>
+            <h3 style={{ marginTop: 0 }}>💡 AI Tips</h3>
+            <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+              <div style={{ marginBottom: 8 }}>• AI learns your productivity patterns automatically</div>
+              <div style={{ marginBottom: 8 }}>• Follow AI recommendations to unlock bonuses</div>
+              <div style={{ marginBottom: 8 }}>• Build streaks to access advanced AI features</div>
+              <div>• Export your data anytime for analysis</div>
+            </div>
           </div>
 
-
-
+          {/* Reset Progress */}
           <div style={currentStyles.card}>
-            <h3 style={{ marginTop: 0 }}>⚠️ Reset Progress</h3>
-            <p style={{ fontSize: 13, color: isDarkMode ? "#999" : "#666", marginBottom: 12 }}>
-              This will permanently delete all your progress, stats, and achievements.
+            <h3 style={{ marginTop: 0, color: '#dc2626' }}>⚠️ Reset Progress</h3>
+            <p style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+              Permanently delete all progress including AI learning data.
             </p>
             <button 
               style={{
                 ...currentStyles.btn,
                 backgroundColor: '#dc2626',
+                color: '#fff',
                 border: '1px solid #dc2626',
                 width: '100%',
                 padding: useMobileLayout ? '12px' : '8px 12px'
               }}
               onClick={() => {
-                if (window.confirm('⚠️ Are you absolutely sure?\n\nThis will DELETE ALL your progress including:\n• Level and XP\n• Tasks and goals\n• Session history\n• Achievements\n• Streaks\n\nThis action cannot be undone!')) {
-                  // Reset all progress
-                  clearScheduledReminders();
+                if (window.confirm('⚠️ DELETE ALL PROGRESS?\n\nThis will permanently remove:\n• All session data and AI learning\n• Tasks, goals, and achievements\n• Customization settings\n\nThis cannot be undone!')) {
                   setUserProgress({
                     xp: 0,
                     level: 1,
@@ -2936,6 +2684,7 @@ export default function App() {
                     streakCount: 0,
                     lastStreakDate: null,
                     streakFreezes: 0,
+                    aiRecommendationsFollowed: 0,
                     achievements: ACHIEVEMENTS
                   });
                   setTasks([]);
@@ -2946,17 +2695,22 @@ export default function App() {
                     enabled: false,
                     optimalTimes: [],
                     scheduledReminders: [],
+                    aiLearningData: {
+                      sessionPatterns: [],
+                      productivityScores: [],
+                      environmentFactors: []
+                    },
                     preferences: {
-                      reminderTypes: ['focus', 'break', 'streak'],
-                      frequency: 'adaptive',
+                      reminderTypes: ['focus', 'break', 'streak', 'optimization'],
+                      aiIntensity: 'adaptive',
                       quietHours: { start: 22, end: 7 }
                     }
                   });
-                  alert('✅ Progress has been reset successfully!');
+                  alert('✅ All progress has been reset!');
                 }
               }}
             >
-              🗑️ DELETE ALL PROGRESS
+              🗑️ DELETE ALL DATA
             </button>
           </div>
         </aside>
@@ -2979,41 +2733,29 @@ export default function App() {
 
       {/* Post-Session Reflection Modal */}
       {showReflection && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
+        <div style={currentStyles.modalOverlay}>
           <div style={{
-            ...currentStyles.card,
-            maxWidth: useMobileLayout ? '100%' : 400,
-            width: '100%'
+            ...currentStyles.modal,
+            maxWidth: useMobileLayout ? '100%' : 400
           }}>
-            <h3 style={{ marginTop: 0 }}>Quick Reflection 🤔</h3>
-            <p style={{ color: isDarkMode ? "#999" : "#666", margin: '8px 0' }}>
-              What did you achieve in this focus session?
+            <h3 style={{ marginTop: 0 }}>Session Reflection 🤔</h3>
+            <p style={{ color: "#666", margin: '8px 0', fontSize: 14 }}>
+              What did you accomplish? This helps the AI learn your patterns.
             </p>
             <textarea
               value={reflectionText}
               onChange={(e) => setReflectionText(e.target.value)}
-              placeholder="I completed the first draft of my report..."
+              placeholder="I completed the research for my project and made good progress on the outline..."
               style={{
                 ...currentStyles.input,
                 width: '100%',
                 height: 80,
                 resize: 'vertical',
-                marginBottom: 12
+                marginBottom: 16,
+                fontSize: 13
               }}
             />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12 }}>
               <button style={{ ...currentStyles.btn, flex: 1 }} onClick={saveReflection}>
                 Save Reflection
               </button>
@@ -3027,83 +2769,63 @@ export default function App() {
 
       {/* Micro-Break Options Modal */}
       {showBreakOptions && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
+        <div style={currentStyles.modalOverlay}>
           <div style={{
-            ...currentStyles.card,
-            maxWidth: useMobileLayout ? '100%' : 400,
-            width: '100%'
+            ...currentStyles.modal,
+            maxWidth: useMobileLayout ? '100%' : 400
           }}>
             <h3 style={{ marginTop: 0 }}>Break Time! 🧘‍♀️</h3>
-            <p style={{ color: isDarkMode ? "#999" : "#666", margin: '8px 0 16px' }}>
-              Choose an activity to refresh your mind:
+            <p style={{ color: "#666", margin: '8px 0 16px', fontSize: 14 }}>
+              Choose a research-backed activity to refresh your mind:
             </p>
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gap: 12 }}>
               <button 
-                style={{...currentStyles.btn, textAlign: 'left', padding: 12 }}
+                style={{...currentStyles.btn, textAlign: 'left', padding: 16, fontSize: 13 }}
                 onClick={() => {
-                  alert('🧘‍♀️ Stand up, stretch your arms, roll your shoulders, and take 3 deep breaths.');
+                  alert('🧘‍♀️ Stand up, stretch your arms above your head, roll your shoulders, and take 5 deep breaths. This helps reset your posture and oxygenate your brain.');
                   setShowBreakOptions(false);
                 }}
               >
-                🧘‍♀️ Mini Stretch & Posture Reset
+                🧘‍♀️ Posture Reset & Deep Breathing
               </button>
               <button 
-                style={{...currentStyles.btn, textAlign: 'left', padding: 12 }}
+                style={{...currentStyles.btn, textAlign: 'left', padding: 16, fontSize: 13 }}
                 onClick={() => {
-                  alert('🧠 Quick mental game: Count backwards from 50 to 1 by 3s. (50, 47, 44...)');
+                  alert('🧠 Mental refresh: Look out a window and identify 5 different objects, then count backwards from 30. This helps reset your attention.');
                   setShowBreakOptions(false);
                 }}
               >
-                🧠 Brain Refresh Quiz
+                🧠 Attention Reset Exercise
               </button>
               <button 
-                style={{...currentStyles.btn, textAlign: 'left', padding: 12 }}
+                style={{...currentStyles.btn, textAlign: 'left', padding: 16, fontSize: 13 }}
                 onClick={() => {
-                  alert('💧 Hydration check! Drink a glass of water and notice how it makes you feel.');
+                  alert('💧 Drink a full glass of water slowly and mindfully. Dehydration impacts focus more than we realize.');
                   setShowBreakOptions(false);
                 }}
               >
-                💧 Water Reminder
+                💧 Mindful Hydration
               </button>
               <button 
-                style={currentStyles.smallBtn}
+                style={{...currentStyles.smallBtn, textAlign: 'center' }}
                 onClick={() => setShowBreakOptions(false)}
               >
-                Skip Activities
+                Skip Break Activities
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <footer style={{
-        ...currentStyles.footer,
-        padding: useMobileLayout ? '16px 0' : '8px 0'
-      }}>
-        <small style={{ fontSize: useMobileLayout ? 14 : 12 }}>
-          Made on Replit • Level {calculateLevel(userProgress.xp)} • {userProgress.xp} XP
-          {user ? (
-            <span style={{ color: getThemeColor(), marginLeft: 8 }}>
-              • ☁️ Synced to {user.username}
-            </span>
-          ) : (
-            <span style={{ color: isDarkMode ? '#999' : '#666', marginLeft: 8 }}>
-              • 📱 Guest Mode (Local Only)
+      <footer style={currentStyles.footer}>
+        <div style={{ fontSize: 12, color: '#666' }}>
+          FocusGuard v2.0 • Level {calculateLevel(userProgress.xp)} • {userProgress.xp} XP
+          {smartReminders.enabled && (
+            <span style={{ marginLeft: 8, color: '#000', fontWeight: 600 }}>
+              • 🤖 AI Active
             </span>
           )}
-        </small>
+        </div>
       </footer>
 
       <style>{`
@@ -3117,224 +2839,211 @@ export default function App() {
   );
 }
 
-// ---------------------- Inline Styles ----------------------
-const baseStyles = {
+// ---------------------- Monochrome Styles ----------------------
+const monochromeStyles = {
   app: {
-    fontFamily: "Inter, Roboto, Arial, sans-serif",
-    maxWidth: 980,
-    margin: "12px auto",
-    padding: 12,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    maxWidth: 1200,
+    margin: "16px auto",
+    padding: 16,
+    backgroundColor: "#ffffff",
+    color: "#000000",
+    lineHeight: 1.5,
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottom: "2px solid #000000",
   },
   logo: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 8,
-    background: "#111",
-    color: "#fff",
+    backgroundColor: "#000000",
+    color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: 800,
+    fontSize: 18,
   },
   main: {
     display: "grid",
-    gridTemplateColumns: "1fr 360px",
-    gap: 12,
+    gridTemplateColumns: "2fr 1fr",
+    gap: 24,
   },
   leftCol: {},
   rightCol: {},
   timerCard: {
-    padding: 12,
-    borderRadius: 10,
-    background: "#fff",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+    padding: 32,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    border: "2px solid #000000",
+    boxShadow: "4px 4px 0px #000000",
   },
   card: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    background: "#fff",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    border: "1px solid #000000",
+    boxShadow: "2px 2px 0px #000000",
   },
   btn: {
-    background: "#111",
-    color: "#fff",
-    padding: "8px 12px",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontSize: 14,
-  },
-  smallBtn: {
-    background: "#eee",
-    color: "#111",
-    padding: "6px 8px",
-    border: "none",
-    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    color: "#000000",
+    padding: "12px 16px",
+    border: "1px solid #000000",
+    borderRadius: 6,
     cursor: "pointer",
     fontSize: 13,
+    fontWeight: 500,
+    transition: "all 0.1s ease",
+    ':hover': {
+      backgroundColor: "#f0f0f0",
+    }
+  },
+  primaryBtn: {
+    backgroundColor: "#000000",
+    color: "#ffffff",
+    padding: "12px 24px",
+    border: "1px solid #000000",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 600,
+    transition: "all 0.1s ease",
+  },
+  modeBtn: {
+    backgroundColor: "#ffffff",
+    color: "#000000",
+    padding: "8px 12px",
+    border: "1px solid #000000",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 500,
+    transition: "all 0.1s ease",
+  },
+  smallBtn: {
+    backgroundColor: "#f8f9fa",
+    color: "#000000",
+    padding: "6px 12px",
+    border: "1px solid #000000",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 500,
   },
   input: {
     flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    border: "1px solid #ddd",
-    fontSize: 14,
+    padding: 12,
+    borderRadius: 6,
+    border: "1px solid #000000",
+    fontSize: 13,
+    backgroundColor: "#ffffff",
+    color: "#000000",
   },
   smallInput: {
     width: 80,
-    padding: 6,
+    padding: 8,
     marginLeft: 8,
-    borderRadius: 6,
-    border: "1px solid #ddd",
-    fontSize: 14,
+    borderRadius: 4,
+    border: "1px solid #000000",
+    fontSize: 13,
+    backgroundColor: "#ffffff",
+    color: "#000000",
   },
   historyRow: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "8px 4px",
-    borderBottom: "1px dashed #eee",
+    alignItems: "center",
+    padding: "8px 0",
+    borderBottom: "1px solid #e0e0e0",
   },
   taskRow: {
-    padding: 6,
-    borderBottom: "1px solid #fafafa",
+    padding: "8px 0",
+    borderBottom: "1px solid #f0f0f0",
   },
   iconBtn: {
-    background: "transparent",
+    backgroundColor: "transparent",
     border: "none",
     cursor: "pointer",
-    color: "#c33",
-    padding: 4,
+    color: "#666666",
+    padding: 6,
+    borderRadius: 4,
+    fontSize: 12,
+    ':hover': {
+      backgroundColor: "#f0f0f0",
+    }
   },
   footer: {
-    marginTop: 18,
+    marginTop: 32,
+    paddingTop: 16,
     textAlign: "center",
-    color: "#666",
+    borderTop: "1px solid #e0e0e0",
   },
-  rowLabel: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-};
-
-const cssStyles = `
-body { background: #f6f8fa; margin: 0; }
-* { box-sizing: border-box; }
-@media (max-width: 880px) {
-  .App { padding: 8px; }
-}
-@media (max-width: 768px) {
-  /* Mobile optimizations */
-  main { grid-template-columns: 1fr !important; }
-  header { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
-  .timer-card { padding: 16px !important; }
-  .card { padding: 10px !important; margin-top: 8px !important; }
-}
-`;
-
-const darkCssStyles = `
-body { background: #0d1117; margin: 0; color: #e6edf3; }
-* { box-sizing: border-box; }
-@media (max-width: 880px) {
-  .App { padding: 8px; }
-}
-@media (max-width: 768px) {
-  /* Mobile optimizations */
-  main { grid-template-columns: 1fr !important; }
-  header { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
-  .timer-card { padding: 16px !important; }
-  .card { padding: 10px !important; margin-top: 8px !important; }
-}
-`;
-
-// Dark theme style overrides
-const darkStyles = {
-  timerCard: {
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#161b22",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.3)",
-    border: "1px solid #30363d",
-  },
-  card: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#161b22",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.3)",
-    border: "1px solid #30363d",
-  },
-  btn: {
-    backgroundColor: "#21262d",
-    color: "#e6edf3",
-    padding: "8px 12px",
-    border: "1px solid #30363d",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontSize: 14,
-  },
-  darkBtn: {
-    backgroundColor: "#ffffff",
-    color: "#0d1117",
-    border: "1px solid #30363d",
-  },
-  smallBtn: {
-    backgroundColor: "#ffffff",
-    color: "#0d1117",
-    padding: "6px 8px",
-    border: "1px solid #30363d",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontSize: 13,
-  },
-  input: {
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    border: "1px solid #30363d",
-    backgroundColor: "#0d1117",
-    color: "#e6edf3",
-    fontSize: 14,
-  },
-  smallInput: {
-    width: 80,
-    padding: 6,
-    marginLeft: 8,
-    borderRadius: 6,
-    border: "1px solid #30363d",
-    backgroundColor: "#0d1117",
-    color: "#e6edf3",
-    fontSize: 14,
-  },
-  historyRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "8px 4px",
-    borderBottom: "1px dashed #30363d",
-  },
-  taskRow: {
-    padding: 6,
-    borderBottom: "1px solid #21262d",
-  },
-  iconBtn: {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "#f85149",
-    padding: 4,
-  },
-  logo: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: "#ffffff",
-    color: "#0d1117",
-    display: "flex",
+  rowLabel: { 
+    display: "flex", 
+    justifyContent: "space-between", 
     alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 800,
+    fontSize: 13,
+    fontWeight: 500,
   },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    zIndex: 1000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20
+  },
+  modal: {
+    backgroundColor: '#ffffff',
+    border: '2px solid #000000',
+    borderRadius: 12,
+    padding: 24,
+    maxWidth: 500,
+    width: '100%',
+    boxShadow: '6px 6px 0px #000000'
+  }
 };
+
+const monochromeCSS = `
+  body { 
+    background: #ffffff; 
+    margin: 0; 
+    color: #000000;
+  }
+  * { 
+    box-sizing: border-box; 
+  }
+  button:hover {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+  }
+  button:active {
+    transform: translateY(0px);
+  }
+  button[style*="backgroundColor: #000000"]:hover {
+    background-color: #333333 !important;
+  }
+  .primary-btn:hover {
+    background-color: #333333 !important;
+  }
+  @media (max-width: 768px) {
+    main { 
+      grid-template-columns: 1fr !important; 
+    }
+  }
+`;
