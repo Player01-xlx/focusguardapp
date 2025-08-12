@@ -5,7 +5,7 @@
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![AI Powered](https://img.shields.io/badge/🤖-AI%20Powered-brightgreen?style=flat)
 
-**[🚀 Try the Live Demo](https://focusguard0001.netlify.app/)**
+**[🚀 Try the Live Demo](https://focusguardapp0001.netlify.app/)**
 
 ## 🧠 Why FocusGuard Exists
 
@@ -105,7 +105,7 @@ FocusGuard is the **world's first AI-powered focus assistant** that adapts to yo
 ## 🚀 Getting Started
 
 ### Instant Start
-1. **[Open FocusGuard](https://focusguard0001.netlify.app)** in your browser
+1. **[Open FocusGuard](https://focusguardapp0001.netlify.app)** in your browser
 2. Click "▶ Start" for your first 25-minute focus session
 3. Complete the session and write a brief reflection
 4. Watch as the AI begins learning your patterns
@@ -125,18 +125,6 @@ FocusGuard is the **world's first AI-powered focus assistant** that adapts to yo
 
 > *"I've tried every Pomodoro app. This is the only one that kept me engaged for months."* - Dr. Lisa Chen, Researcher
 
-## 🛠️ For Developers
-
-### Fork This Project
-```bash
-# Clone from Replit
-Fork this Repl: https://replit.com/@creator/focusguard
-
-# Or run locally
-git clone [repository-url]
-npm install
-npm run dev
-```
 
 ### Key Architecture Decisions
 - **Local-First:** All data processing happens client-side
@@ -144,9 +132,6 @@ npm run dev
 - **Mobile-First:** Responsive design optimized for all screen sizes
 - **Privacy-Centric:** Zero data collection, everything stored locally
 
-## 📄 License
-
-MIT License - Feel free to fork, modify, and share. See LICENSE file for details.
 
 ## 🤝 Contributing
 
@@ -169,7 +154,7 @@ FocusGuard is open for contributions! Whether you're fixing bugs, adding feature
 
 **Ready to transform your productivity?** 
 
-**[🚀 Start Using FocusGuard Now](https://focusguard.replit.app)**
+**[🚀 Start Using FocusGuard Now](https://focusguardapp0001.netlify.app)**
 
 *Built with ❤️ for humans who want to focus better*
 
