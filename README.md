@@ -7,7 +7,7 @@
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![AI Powered](https://img.shields.io/badge/🤖-AI%20Powered-brightgreen?style=flat)
 
-**[🚀 Try the Live Demo](https://focusguardapp0001.netlify.app/)**
+**[🚀 Try the Live Demo](https://focusguardaiv2.netlify.app/)**
 
 ## 🧠 Why FocusGuard Exists
 
@@ -136,7 +136,7 @@ FocusGuard is the **world's first AI-powered focus assistant** that adapts to yo
 ## 🚀 Getting Started
 
 ### Instant Start (30 seconds)
-1. **[Open FocusGuard](https://focusguardapp0001.netlify.app)** in your browser
+1. **[Open FocusGuard](https://focusguardaiv2.netlify.app/)** in your browser
 2. **Set your username** when prompted for a personalized experience
 3. **Click "▶ Start"** for your first 25-minute focus session
 4. **Complete the session** and write a brief reflection
@@ -234,7 +234,7 @@ FocusGuard is open for contributions! Whether you're fixing bugs, adding feature
 
 **Ready to transform your productivity?** 
 
-**[🚀 Start Using FocusGuard Now](https://focusguardapp0001.netlify.app)**
+**[🚀 Start Using FocusGuard Now](https://focusguardaiv2.netlify.app/)**
 
 *Built with ❤️ for humans who want to focus better*
 
