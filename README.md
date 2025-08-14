@@ -30,11 +30,6 @@
 
 ## 🎆 What's New in Version 2.9
 
-### 🎨 **Stunning Visual Overhaul**
-- **Circular Progress Rings:** Beautiful animated progress circles with dynamic fills
-- **Floating Particle System:** Mesmerizing background particles during focus sessions
-- **Glowing Timer Effects:** Pulsing animations and radial gradients that respond to your focus
-- **Enhanced Color Themes:** More vibrant and cohesive color schemes across all modes
 
 ### 🧠 **Advanced AI Intelligence**
 - **Predictive Session Success:** Enhanced accuracy now at 90%+ success rate prediction
