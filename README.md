@@ -5,7 +5,7 @@
 ![AI Powered](https://img.shields.io/badge/🤖-AI%20Powered-brightgreen?style=flat)
 ![Version](https://img.shields.io/badge/Version-2.9-blue?style=flat)
 
-**[🚀 Try the Live Demo](https://focusguardapp0001.netlify.app/)** | **[📹 Watch Demo Video](https://www.youtube.com/@ctrlaltstudy-g1z)**
+**[🚀 Try the Live Demo](https://focusguardaaiv2.netlify.app/)** | **[📹 Watch Demo Video](https://www.youtube.com/@ctrlaltstudy-g1z)**
 
 ---
 
@@ -30,28 +30,6 @@
 
 ## 🎆 What's New in Version 2.9
 
-
-### 🧠 **Advanced AI Intelligence**
-- **Predictive Session Success:** Enhanced accuracy now at 90%+ success rate prediction
-- **Smart Break Recommendations:** AI suggests optimal break activities based on session intensity
-- **Focus Pattern Recognition:** Identifies micro-productivity patterns within sessions
-- **Contextual Motivation:** Dynamic encouragement based on your current performance trends
-
-### 🏆 **Next-Level Gamification**
-- **100+ Progressive Achievements:** Expanded from 70 to 100+ unique achievements
-- **Dynamic Reward Scaling:** Intelligent coin multipliers based on difficulty and consistency
-- **Seasonal Challenges:** Time-limited events with exclusive rewards
-- **Achievement Streaks:** Bonus rewards for consecutive achievement unlocks
-
-### 🎯 **Cutting-Edge Features**
-- **Immersive Timer Interface:** Completely redesigned timer with cinematic effects
-- **Smart Session Insights:** Real-time productivity scoring with visual feedback
-- **Enhanced Mobile Experience:** Touch-optimized controls and responsive animations
-- **Performance Optimization:** Faster load times and smoother animations across all devices
-
----
-
-## 🚀 Complete Feature Set
 
 ### 🤖 **Intelligent AI Coach**
 - **Adaptive Session Lengths:** AI adjusts durations (15-50min) based on success patterns
@@ -129,7 +107,7 @@
 ## 🎯 Getting Started Guide
 
 ### **Quick Start (2 minutes)**
-1. **[Open FocusGuard →](https://focusguardapp0001.netlify.app/)**
+1. **[Open FocusGuard →](https://focusguardaiv2.netlify.app/)**
 2. **Set your username** for personalized experience
 3. **Click "▶ Start"** for your first focus session
 4. **Complete & reflect** to begin AI learning
@@ -303,7 +281,7 @@ FocusGuard is open source software. See the [LICENSE](LICENSE) file for details.
 
 ## 🛡️ Ready to Transform Your Productivity?
 
-**[🚀 Start Using FocusGuard Now](https://focusguardapp0001.netlify.app/)**
+**[🚀 Start Using FocusGuard Now](https://focusguardaiv2.netlify.app/)**
 
 *Built with ❤️ for humans who want to focus better*
 
