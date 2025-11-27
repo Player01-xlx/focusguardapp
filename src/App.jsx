@@ -16,6 +16,7 @@ import React, { useState, useEffect, useRef, createContext, useContext } from "r
 import AboutUs from "./AboutUs";
 import ContactUs from "./ContactUs";
 import FeedbackPage from "./FeedbackPage";
+import { fetchGeminiInsights, fetchGeminiRecommendations, analyzeTaskPriority } from './gemini';
 
 // --- Deep Offline Focus Journal Integration ---
 
@@ -727,6 +728,7 @@ const BREAK_ACTIVITIES = {
         'Return to your workspace feeling refreshed'
       ]
     },
+    
     {
       id: 'energizing_moves',
       name: '2-Minute Energy Boost',
@@ -1113,6 +1115,16 @@ export default function App() {
   // Focus Journal context provider
   const focusJournal = useFocusJournal();
 
+  // Gemini AI State
+  const [geminiData, setGeminiData] = useState({
+    insights: [],
+    prediction: null,
+    lastUpdated: 0
+  });
+  const [geminiRecs, setGeminiRecs] = useState([]);
+  const [isAIProcessing, setIsAIProcessing] = useState(false);
+
+
   // Settings persisted in localStorage
   const [settings, setSettings] = useState(() => {
     try {
@@ -1189,6 +1201,50 @@ export default function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Enhanced AI: Trigger Gemini Analysis on history change
+  useEffect(() => {
+    const updateAI = async () => {
+      if (history.length >= 3 && smartReminders.enabled) {
+        // Debounce: Only run if last update was > 5 mins ago or it's a fresh load
+        if (Date.now() - geminiData.lastUpdated < 300000) return;
+        
+        setIsAIProcessing(true);
+        try {
+          const insights = await fetchGeminiInsights(history, userProgress, settings);
+          if (insights) {
+            setGeminiData({
+              insights: insights.insights,
+              prediction: insights.prediction,
+              lastUpdated: Date.now()
+            });
+          }
+          
+          // Also refresh recommendations
+          const context = {
+            hour: new Date().getHours(),
+            dayOfWeek: new Date().getDay(),
+            energy: moodEnergyTracker.currentEnergy,
+            mood: moodEnergyTracker.currentMood,
+            completionRate: history.filter(s => s.mode === 'focus').length > 0 
+              ? history.filter(s => s.durationSec >= settings.focusMinutes * 60 * 0.8).length / history.filter(s => s.mode === 'focus').length 
+              : 0,
+            taskCount: tasks.filter(t => !t.done).length
+          };
+          
+          const recs = await fetchGeminiRecommendations(context);
+          if (recs) setGeminiRecs(recs);
+          
+        } catch (e) {
+          console.error("AI Update Failed", e);
+        } finally {
+          setIsAIProcessing(false);
+        }
+      }
+    };
+    
+    updateAI();
+  }, [history, smartReminders.enabled, userProgress.level]);
 
   useEffect(() => {
     localStorage.setItem("fg_forceMobileLayout", JSON.stringify(forceMobileLayout));
@@ -3058,92 +3114,54 @@ export default function App() {
   }
 
   // Tasks handlers
-  function addTask() {
+  async function addTask() {
     const text = taskInput.trim();
     if (!text) return;
-    const t = { 
-      id: generateId(), 
+    
+    // Optimistic add first
+    const tempId = generateId();
+    const initialTask = { 
+      id: tempId, 
       text, 
       done: false,
       priority: 'medium',
       aiSuggested: false,
-      createdAt: new Date().toISOString().slice(0, 10)
+      createdAt: new Date().toISOString().slice(0, 10),
+      isAnalyzing: true // New flag for UI
     };
-    setTasks((s) => [t, ...s]);
+    
+    setTasks((s) => [initialTask, ...s]);
     setTaskInput("");
-  }
 
-  function toggleTask(id) {
-    setTasks((s) => s.map((t) => {
-      if (t.id === id && !t.done) {
-        // Task completed - award XP and coins
-        setUserProgress(prev => {
-          const newXP = prev.xp + (t.aiSuggested ? 8 : 5); // Bonus for AI-suggested tasks
-          const newLevel = calculateLevel(newXP);
-          const newTotalTasks = prev.totalTasks + 1;
-          const newAIRecs = t.aiSuggested ? prev.aiRecommendationsFollowed + 1 : prev.aiRecommendationsFollowed;
-
-          // Award coins for task completion
-          setCoins(prevCoins => prevCoins + (t.aiSuggested ? 3 : 2));
-
-          const updatedAchievements = prev.achievements.map(achievement => {
-            if (achievement.unlocked) return achievement;
-
-            let shouldUnlock = false;
-            switch (achievement.id) {
-              case 'first_task':
-                shouldUnlock = newTotalTasks >= 1;
-                break;
-              case 'task_rookie':
-                shouldUnlock = newTotalTasks >= 10;
-                break;
-              case 'task_master':
-                shouldUnlock = newTotalTasks >= 50;
-                break;
-              case 'productivity_machine':
-                shouldUnlock = newTotalTasks >= 100;
-                break;
-              case 'task_legend':
-                shouldUnlock = newTotalTasks >= 250;
-                break;
-              case 'ai_student':
-                shouldUnlock = newAIRecs >= 10;
-                break;
-              case 'ai_master':
-                shouldUnlock = newAIRecs >= 50;
-                break;
-              case 'ai_sensei':
-                shouldUnlock = newAIRecs >= 100;
-                break;
-              default:
-                return achievement;
+    // Call Gemini
+    if (smartReminders.enabled) {
+      try {
+        const analysis = await analyzeTaskPriority(text, tasks);
+        if (analysis) {
+          setTasks(prev => prev.map(t => {
+            if (t.id === tempId) {
+              return {
+                ...t,
+                priority: analysis.priority,
+                text: analysis.refinedText || t.text, // Use refined text if available
+                aiReasoning: analysis.aiReasoning,
+                isAnalyzing: false,
+                aiSuggested: analysis.priority === 'high' // Tag high priority as AI suggested
+              };
             }
-
-            if (shouldUnlock) {
-              setCoins(prevCoins => prevCoins + achievement.coins);
-              sendNotification(`Achievement Unlocked!`, `${achievement.icon} ${achievement.name} - ${achievement.coins} coins earned!`);
-              return { ...achievement, unlocked: true };
-            }
-            return achievement;
-          });
-
-          // Check for level up
-          if (newLevel > prev.level) {
-            sendNotification(`Level Up!`, `Congratulations! You've reached level ${newLevel}!`);
+            return t;
+          }));
+          if (analysis.priority === 'high') {
+            playButtonClickSound(); // Subtle feedback for high priority
           }
-
-          return {
-            ...prev,
-            xp: newXP,
-            level: newLevel,
-            totalTasks: newTotalTasks,
-            aiRecommendationsFollowed: newAIRecs,
-            achievements: updatedAchievements
-          };
-        });
+        }
+      } catch (e) {
+        // Fallback if AI fails
+        setTasks(prev => prev.map(t => t.id === tempId ? { ...t, isAnalyzing: false } : t));
       }
-      return t.id === id ? { ...t, done: !t.done } : t;
-    }));
+    } else {
+      setTasks(prev => prev.map(t => t.id === tempId ? { ...t, isAnalyzing: false } : t));
+    }
   }
 
   function removeTask(id) {
@@ -3845,11 +3863,16 @@ export default function App() {
 
     switch (sectionKey) {
       case 'aiInsights':
-        const analysis = performDeepAIAnalysis();
+        // Use Gemini data if available, otherwise fallback to local analysis
+        const localAnalysis = performDeepAIAnalysis();
+        const displayInsights = geminiData.insights.length > 0 ? geminiData.insights : localAnalysis.insights;
+        const displayPrediction = geminiData.prediction || (localAnalysis.predictions.length > 0 ? localAnalysis.predictions[0] : null);
+        const confidence = geminiData.prediction ? geminiData.prediction.confidence : Math.round(localAnalysis.confidence);
+
         return (
           <div key="aiInsights" style={currentStyles.card}>
             <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🧠 AI Insights
+              🧠 Gemini AI Insights
               <span style={{ 
                 fontSize: 10, 
                 backgroundColor: '#000', 
@@ -3858,14 +3881,14 @@ export default function App() {
                 borderRadius: 8,
                 fontWeight: 'normal'
               }}>
-                {Math.round(analysis.confidence)}% confidence
+                {isAIProcessing ? 'Analyzing...' : `${confidence}% confidence`}
               </span>
             </h3>
-            {analysis.insights.length === 0 ? (
+            {displayInsights.length === 0 ? (
               <div style={{ color: "#666", fontSize: 14 }}>Complete more sessions to unlock AI insights.</div>
             ) : (
               <div>
-                {analysis.insights.map((insight, index) => (
+                {displayInsights.map((insight, index) => (
                   <div key={index} style={{ 
                     padding: 10, 
                     borderRadius: 6, 
@@ -3877,19 +3900,19 @@ export default function App() {
                     💡 {insight}
                   </div>
                 ))}
-                {analysis.predictions.length > 0 && (
+                {displayPrediction && (
                   <div style={{ 
                     padding: 10, 
-                    borderRadius: 6,
+                    borderRadius: 6, 
                     backgroundColor: '#f0f9ff',
                     border: '1px solid #3b82f6',
                     marginTop: 10
                   }}>
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
-                      🔮 Next Session Prediction: {analysis.predictions[0].score}%
+                      🔮 Next Session Success: {displayPrediction.score}%
                     </div>
                     <div style={{ fontSize: 11, color: '#666' }}>
-                      {analysis.predictions[0].factors.map((factor, i) => (
+                      {displayPrediction.factors.map((factor, i) => (
                         <div key={i}>• {factor}</div>
                       ))}
                     </div>
@@ -3901,14 +3924,17 @@ export default function App() {
         );
 
       case 'smartRecommendations':
-        const recommendations = getEnhancedAIRecommendations();
+        const localRecs = getEnhancedAIRecommendations();
+        // Merge local urgent recommendations with Gemini's broad recommendations
+        const displayRecs = [...localRecs, ...geminiRecs].slice(0, 6);
+        
         return (
           <div key="smartRecommendations" style={currentStyles.card}>
             <h3 style={{ marginTop: 0 }}>🤖 AI Recommendations</h3>
-            {recommendations.length === 0 ? (
+            {displayRecs.length === 0 ? (
               <div style={{ color: "#666" }}>AI is learning your patterns. Complete more sessions for personalized recommendations!</div>
             ) : (
-              recommendations.map((rec, index) => (
+              displayRecs.map((rec, index) => (
                 <div key={index} style={{
                   padding: 12,
                   borderRadius: 8,
@@ -3932,7 +3958,7 @@ export default function App() {
                     {rec.priority}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 18 }}>{rec.icon}</span>
+                    <span style={{ fontSize: 18 }}>{rec.icon || '🤖'}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{rec.title}</div>
                       <div style={{ fontSize: 12, color: "#555", lineHeight: 1.4 }}>
@@ -3940,7 +3966,7 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  {rec.action && (
+                  {rec.action && typeof rec.action === 'function' && (
                     <button
                       style={{
                         ...currentStyles.smallBtn,
