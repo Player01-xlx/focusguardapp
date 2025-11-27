@@ -1,7 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini with your provided API Key
-const API_KEY = "AIzaSyB1LiibPEL_5NgaATlCk0D0CBn992GRLyw";
+// Initialize Gemini with API Key from Environment Variables
+// Make sure to add VITE_GEMINI_API_KEY to your .env file or Netlify Environment Variables
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+// Fallback warning if key is missing
+if (!API_KEY) {
+  console.error("Missing VITE_GEMINI_API_KEY. AI features will not work.");
+}
+
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
